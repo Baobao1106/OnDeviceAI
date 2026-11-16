@@ -1,6 +1,7 @@
-numpy
-opencv-python
-scipy
-scikit-image
-torch
-lpips
+numpy>=1.24
+opencv-python>=4.8
+scipy>=1.10
+scikit-image>=0.21
+# torch: trên Jetson hãy cài bản NVIDIA JetPack thay vì bản PyPI
+torch>=2.0
+lpips>=0.1.4
