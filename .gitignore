@@ -1,9 +1,7 @@
 __pycache__/
 *.pyc
 
-# Dữ liệu của ban tổ chức: chỉ dùng cho cuộc thi, không đẩy lên git
-sets/
-panos/
+# Dữ liệu của ban tổ chức (sets/, panos/) được đưa vào git theo yêu cầu của nhóm
 *.zip
 *.pptx
 *.xlsx
@@ -13,7 +11,11 @@ runs/
 work/
 *.png
 !docs/*.png
+!sets/**/*.png
 *.pt
 *.pth
 *.onnx
 *.engine
+
+# Môi trường ảo
+.venv/
