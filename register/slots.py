@@ -36,6 +36,8 @@ SIGMA_DEG = 7.0                 # tay run +-5 độ: sai lệch quanh góc danh 
 CAP = 3.0                       # mỗi số hạng chi phí bị chặn ở CAP**2 (ảnh lệch quá nhiều không kéo cả bộ)
 YAW_SIGN = 1.0                  # chiều yaw của lõi so với common.py (yaw > 0 quay phải); đã kiểm với pose thật
 POLE_PITCH = 80.0               # |pitch| lớn hơn: ảnh trần/sàn, không có yaw
+ALIGN_MARGIN = 3.0              # margin (chi phí) từ mức này trở lên: cách đặt nhãn của thành phần coi là chắc
+ALIGN_FLOOR = 0.3               # hệ số confidence thấp nhất khi hai cách đặt nhãn hoà hẳn
 
 
 def nominal(slot):
@@ -73,7 +75,12 @@ def _costs(idx, slots, pitch, yaw, psi, Y, P):
 
 def _fit_component(idx, free, pitch, yaw, Y, P):
     """Gán các ảnh của một thành phần vào các ô còn trống. Chọn độ lệch yaw chung `psi` của thành phần (khung của
-    nó có hướng 0 tùy ý) sao cho tổng chi phí gán Hungarian nhỏ nhất. Trả về ({ảnh: ô}, psi, chi phí)."""
+    nó có hướng 0 tùy ý) sao cho tổng chi phí gán Hungarian nhỏ nhất.
+
+    Trả về ({ảnh: ô}, psi, chi phí, margin). `margin` = chi phí của cách đặt nhãn tốt nhì (cách xa >= 10 độ) trừ chi
+    phí tốt nhất: nhỏ nghĩa là hai cách gần như hoà (vòng ngang 8 ảnh và vòng trên/dưới 7 ảnh chỉ khác nhau ~6 độ,
+    ngang độ rung tay), nên chỉ số ô có thể lệch cả bộ một nấc. `inf` khi không có sự nhập nhằng để đo.
+    """
     slots = np.array(sorted(free))
     ring = sum(abs(pitch[k]) < POLE_PITCH for k in idx)
 
@@ -84,13 +91,16 @@ def _fit_component(idx, free, pitch, yaw, Y, P):
 
     if ring < 2:                                          # một ảnh vòng thì yaw không phân biệt được ô nào
         total, assign = solve(0.0)
-        return assign, 0.0, total
+        return assign, 0.0, total, float("inf")
     grid = np.arange(0.0, 360.0, 1.0)
-    best = min(grid, key=lambda g: solve(g)[0])
+    vals = np.array([solve(g)[0] for g in grid])
+    best = grid[int(np.argmin(vals))]
     fine = np.arange(best - 1.0, best + 1.0 + 1e-9, 0.1)
     psi = min(fine, key=lambda g: solve(g)[0])
     total, assign = solve(psi)
-    return assign, float(psi), total
+    far = _circ(grid, best) >= 10.0
+    margin = float(vals[far].min() - total) if far.any() else float("inf")
+    return assign, float(psi), total, max(margin, 0.0)
 
 
 def assign_slots(images, pairs, deadline):
@@ -99,6 +109,8 @@ def assign_slots(images, pairs, deadline):
     Ảnh có cặp khớp: tầng và yaw (trong khung của thành phần liên thông chứa nó) từ phép quay tương đối của các cặp,
     rồi gán Hungarian vào ô; thành phần lớn nhất gán trước, các thành phần nhỏ gán vào ô còn lại.
     Ảnh không có cặp nào: nhận ô còn lại với `confidence` thấp (không có thông tin để chọn ô cụ thể).
+    `confidence` của ảnh có cặp = độ khớp tầng/yaw x cỡ thành phần x độ chắc của cách đặt nhãn (`margin`: khoảng cách
+    chi phí tới cách đặt nhãn tốt nhì; hai cách gần hoà thì chỉ số ô của cả thành phần có thể lệch một nấc).
     """
     names = sorted(images)
     objs = _pair_objects(names, pairs)
@@ -121,13 +133,14 @@ def assign_slots(images, pairs, deadline):
     free = set(range(len(plan)))
     slot_of, conf = {}, {}
     for members in sorted(comps.values(), key=len, reverse=True):
-        assign, psi, _ = _fit_component(members, free, pitch, yaw, Y, P)
+        assign, psi, _, margin = _fit_component(members, free, pitch, yaw, Y, P)
+        align = 1.0 if not np.isfinite(margin) else ALIGN_FLOOR + (1.0 - ALIGN_FLOOR) * min(1.0, margin / ALIGN_MARGIN)
         scale = 1.0 if len(members) >= 8 else min(1.0, (len(members) - 1) / 6.0) * 0.6 + 0.05
         for k, s in assign.items():
             dp = abs(pitch[k] - P[s])
             dy = 0.0 if (abs(pitch[k]) >= POLE_PITCH or abs(P[s]) >= POLE_PITCH) else float(_circ(yaw[k], Y[s] + psi))
             quality = max(0.0, 1.0 - 0.5 * max(dp, dy) / 10.0)
-            slot_of[k], conf[k] = s, round(scale * quality * 0.95, 3)
+            slot_of[k], conf[k] = s, round(scale * quality * align * 0.95, 3)
             free.discard(s)
     left_imgs = [k for k in range(len(names)) if k not in slot_of]
     for k, s in zip(left_imgs, sorted(free)):             # không có thông tin: ô còn lại, độ tin cậy thấp

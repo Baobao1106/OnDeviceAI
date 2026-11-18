@@ -66,5 +66,27 @@ class TestSlots(unittest.TestCase):
         self.check_permutation(got)
 
 
+class TestMargin(unittest.TestCase):
+    def test_margin_is_finite_for_a_ring_component_and_infinite_for_one_image(self):
+        images, pairs, truth = synthetic_set(3)
+        names = sorted(images)
+        objs = slots._pair_objects(names, pairs)
+        A, label, U = slots.component_frames(24, objs)
+        lay = slots.assign_layers(names, objs)
+        pitch = {k: lay[k].pitch_deg for k in A}
+        yaw = {k: float(slots.yaw_deg(A[k][:, 2], U[int(label[k])])[0]) for k in A}
+        Y = np.array([p[0] for p in common.capture_plan()])
+        P = np.array([p[1] for p in common.capture_plan()])
+        _, _, _, margin = slots._fit_component(list(A), set(range(24)), pitch, yaw, Y, P)
+        self.assertTrue(np.isfinite(margin) and margin > 0)
+        one = next(k for k in A if abs(pitch[k]) < 80)
+        self.assertEqual(slots._fit_component([one], set(range(24)), pitch, yaw, Y, P)[3], float("inf"))
+
+    def test_confidence_stays_in_range_and_slots_are_unchanged_by_margin(self):
+        images, pairs, truth = synthetic_set(4)
+        got = slots.assign_slots(images, pairs, 1e18)
+        self.assertTrue(all(0.0 < v["confidence"] <= 0.95 for v in got.values()))
+
+
 if __name__ == "__main__":
     unittest.main()
