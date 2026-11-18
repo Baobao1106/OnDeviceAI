@@ -1,0 +1,562 @@
+[
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00195/2D_rendering/457/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00195",
+  "room": "457",
+  "keypoints": 194,
+  "laplacian_var": 71.09,
+  "mean_gray": 118.3,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 1,
+  "set": "s01"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00064/2D_rendering/2812/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00064",
+  "room": "2812",
+  "keypoints": 641,
+  "laplacian_var": 375.13,
+  "mean_gray": 122.8,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 1,
+  "set": "s02"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00129/2D_rendering/336/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00129",
+  "room": "336",
+  "keypoints": 716,
+  "laplacian_var": 1040.83,
+  "mean_gray": 192.2,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 1,
+  "set": "s03"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00035/2D_rendering/748/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00035",
+  "room": "748",
+  "keypoints": 809,
+  "laplacian_var": 441.35,
+  "mean_gray": 155.2,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 1,
+  "set": "s04"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00100/2D_rendering/288/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00100",
+  "room": "288",
+  "keypoints": 994,
+  "laplacian_var": 774.16,
+  "mean_gray": 67.5,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 1,
+  "set": "s05"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00053/2D_rendering/642/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00053",
+  "room": "642",
+  "keypoints": 1008,
+  "laplacian_var": 1195.12,
+  "mean_gray": 173.8,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 1,
+  "set": "s06"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00018/2D_rendering/354/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00018",
+  "room": "354",
+  "keypoints": 1037,
+  "laplacian_var": 434.53,
+  "mean_gray": 171.1,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 1,
+  "set": "s07"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00119/2D_rendering/159/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00119",
+  "room": "159",
+  "keypoints": 1215,
+  "laplacian_var": 1207.97,
+  "mean_gray": 154.3,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 1,
+  "set": "s08"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00125/2D_rendering/2562/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00125",
+  "room": "2562",
+  "keypoints": 1222,
+  "laplacian_var": 1058.92,
+  "mean_gray": 167.6,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 1,
+  "set": "s09"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00118/2D_rendering/159/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00118",
+  "room": "159",
+  "keypoints": 1258,
+  "laplacian_var": 484.48,
+  "mean_gray": 99.8,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 1,
+  "set": "s10"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00178/2D_rendering/626001/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00178",
+  "room": "626001",
+  "keypoints": 1270,
+  "laplacian_var": 918.09,
+  "mean_gray": 132.0,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 2,
+  "set": "s11"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00069/2D_rendering/141/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00069",
+  "room": "141",
+  "keypoints": 1292,
+  "laplacian_var": 322.45,
+  "mean_gray": 148.8,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 2,
+  "set": "s12"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00189/2D_rendering/533728/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00189",
+  "room": "533728",
+  "keypoints": 1310,
+  "laplacian_var": 518.68,
+  "mean_gray": 158.1,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 2,
+  "set": "s13"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00198/2D_rendering/4947/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00198",
+  "room": "4947",
+  "keypoints": 1347,
+  "laplacian_var": 1583.05,
+  "mean_gray": 155.5,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 2,
+  "set": "s14"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00190/2D_rendering/325839/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00190",
+  "room": "325839",
+  "keypoints": 1463,
+  "laplacian_var": 2796.86,
+  "mean_gray": 161.3,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 2,
+  "set": "s15"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00108/2D_rendering/257/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00108",
+  "room": "257",
+  "keypoints": 1533,
+  "laplacian_var": 1428.82,
+  "mean_gray": 153.0,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 2,
+  "set": "s16"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00165/2D_rendering/2746/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00165",
+  "room": "2746",
+  "keypoints": 1597,
+  "laplacian_var": 2828.39,
+  "mean_gray": 153.3,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 2,
+  "set": "s17"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00192/2D_rendering/1113/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00192",
+  "room": "1113",
+  "keypoints": 1598,
+  "laplacian_var": 1348.48,
+  "mean_gray": 169.5,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 2,
+  "set": "s18"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00059/2D_rendering/735/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00059",
+  "room": "735",
+  "keypoints": 1700,
+  "laplacian_var": 937.96,
+  "mean_gray": 206.2,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 2,
+  "set": "s19"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00137/2D_rendering/1693/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00137",
+  "room": "1693",
+  "keypoints": 1716,
+  "laplacian_var": 2378.01,
+  "mean_gray": 189.5,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 2,
+  "set": "s20"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00078/2D_rendering/512/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00078",
+  "room": "512",
+  "keypoints": 1771,
+  "laplacian_var": 773.12,
+  "mean_gray": 127.3,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 3,
+  "set": "s21"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00155/2D_rendering/819/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00155",
+  "room": "819",
+  "keypoints": 1796,
+  "laplacian_var": 1732.2,
+  "mean_gray": 149.1,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 3,
+  "set": "s22"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00112/2D_rendering/251/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00112",
+  "room": "251",
+  "keypoints": 1869,
+  "laplacian_var": 2089.18,
+  "mean_gray": 173.4,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 3,
+  "set": "s23"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00032/2D_rendering/27551/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00032",
+  "room": "27551",
+  "keypoints": 1887,
+  "laplacian_var": 1763.48,
+  "mean_gray": 165.0,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 3,
+  "set": "s24"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00070/2D_rendering/740/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00070",
+  "room": "740",
+  "keypoints": 1918,
+  "laplacian_var": 2815.86,
+  "mean_gray": 132.9,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 3,
+  "set": "s25"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00044/2D_rendering/355461/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00044",
+  "room": "355461",
+  "keypoints": 1990,
+  "laplacian_var": 1607.8,
+  "mean_gray": 155.4,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 3,
+  "set": "s26"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00144/2D_rendering/5811/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00144",
+  "room": "5811",
+  "keypoints": 2016,
+  "laplacian_var": 1002.26,
+  "mean_gray": 102.3,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 3,
+  "set": "s27"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00019/2D_rendering/413/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00019",
+  "room": "413",
+  "keypoints": 2039,
+  "laplacian_var": 1217.06,
+  "mean_gray": 184.0,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 3,
+  "set": "s28"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00038/2D_rendering/220842/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00038",
+  "room": "220842",
+  "keypoints": 2079,
+  "laplacian_var": 1393.15,
+  "mean_gray": 148.3,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 3,
+  "set": "s29"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00091/2D_rendering/3187/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00091",
+  "room": "3187",
+  "keypoints": 2106,
+  "laplacian_var": 682.3,
+  "mean_gray": 115.8,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 3,
+  "set": "s30"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00149/2D_rendering/4366/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00149",
+  "room": "4366",
+  "keypoints": 2315,
+  "laplacian_var": 1583.31,
+  "mean_gray": 174.7,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 4,
+  "set": "s31"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00066/2D_rendering/36346/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00066",
+  "room": "36346",
+  "keypoints": 2328,
+  "laplacian_var": 2044.34,
+  "mean_gray": 157.7,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 4,
+  "set": "s32"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00079/2D_rendering/335/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00079",
+  "room": "335",
+  "keypoints": 2386,
+  "laplacian_var": 1191.57,
+  "mean_gray": 108.0,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 4,
+  "set": "s33"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00197/2D_rendering/141/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00197",
+  "room": "141",
+  "keypoints": 2427,
+  "laplacian_var": 2119.98,
+  "mean_gray": 81.6,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 4,
+  "set": "s34"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00009/2D_rendering/159/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00009",
+  "room": "159",
+  "keypoints": 2546,
+  "laplacian_var": 2160.57,
+  "mean_gray": 166.0,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 4,
+  "set": "s35"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00140/2D_rendering/1007865/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00140",
+  "room": "1007865",
+  "keypoints": 2774,
+  "laplacian_var": 1626.37,
+  "mean_gray": 180.5,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 4,
+  "set": "s36"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00000/2D_rendering/492165/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00000",
+  "room": "492165",
+  "keypoints": 2902,
+  "laplacian_var": 2581.18,
+  "mean_gray": 177.1,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 4,
+  "set": "s37"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00088/2D_rendering/5885/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00088",
+  "room": "5885",
+  "keypoints": 3011,
+  "laplacian_var": 3068.1,
+  "mean_gray": 185.2,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 4,
+  "set": "s38"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00128/2D_rendering/159/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00128",
+  "room": "159",
+  "keypoints": 3142,
+  "laplacian_var": 1501.9,
+  "mean_gray": 107.6,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 4,
+  "set": "s39"
+ },
+ {
+  "path": "D:/Structured3D_panorama_00/Structured3D/scene_00008/2D_rendering/914963/panorama/full/rgb_rawlight.png",
+  "scene": "scene_00008",
+  "room": "914963",
+  "keypoints": 3715,
+  "laplacian_var": 2940.12,
+  "mean_gray": 132.4,
+  "size": [
+   1024,
+   512
+  ],
+  "texture_quartile": 4,
+  "set": "s40"
+ }
+]
