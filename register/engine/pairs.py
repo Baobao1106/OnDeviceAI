@@ -8,7 +8,9 @@ Thuật toán và tham số giữ nguyên; chỉ thêm kiểm tra `deadline`.
 """
 import itertools
 import os
+import sys
 import time
+import traceback
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, replace
@@ -103,6 +105,8 @@ class PairEngine:
         """feats[k] = self.extract(ảnh names[k]). `only`: tập cặp chỉ số (i, j), i < j, cần khớp (mặc định: tất cả).
         Trả về PipelineResult."""
         t_start = time.perf_counter()
+        if len(names) < 2:
+            return PipelineResult(list(names), [], {}, {}, None, self.cfg)
         n_workers = self.cfg.workers or min(6, os.cpu_count() or 1)
         pool = ProcessPoolExecutor(max_workers=n_workers) if n_workers > 1 else None
         try:
@@ -116,14 +120,22 @@ class PairEngine:
     def _match(self, names, feats, deadline, only, pool, t_start):
         t1 = time.perf_counter()
         raw, jobs = {}, {}
-        for i, j in (sorted(only) if only is not None else itertools.combinations(range(len(names)), 2)):
+        order = sorted(only) if only is not None else list(itertools.combinations(range(len(names)), 2))
+        np.random.default_rng(0).shuffle(order)         # nếu hết giờ giữa chừng, mọi ảnh đều đã có một phần cặp
+        for i, j in order:
             if deadline is not None and time.time() > deadline:
                 break                                   # dừng sớm: các cặp chưa khớp bị bỏ
-            a, b = self._pooled(feats[i], feats[j])
+            try:
+                a, b = self._pooled(feats[i], feats[j])
+            except Exception:                           # một cặp lỗi (ví dụ hết bộ nhớ GPU) không làm hỏng cả bộ
+                print(f"[match] bỏ cặp ({names[i]}, {names[j]}):", file=sys.stderr)
+                traceback.print_exc()
+                continue
             raw[(i, j)] = (a, b)
             args = (a, b, self.cfg.ransac_px, None)                        # lượt 1: tiêu cự tự do theo từng cặp
             jobs[(i, j)] = pool.submit(run_ransac, args) if pool else run_ransac(args)   # CPU chạy chồng GPU
-        first = {k: (v.result() if pool else v) for k, v in jobs.items()}
+        raw = dict(sorted(raw.items()))                 # thứ tự cố định, kết quả không phụ thuộc thứ tự xử lý
+        first = {k: (jobs[k].result() if pool else jobs[k]) for k in raw}
         t_match = time.perf_counter() - t1
 
         t2 = time.perf_counter()

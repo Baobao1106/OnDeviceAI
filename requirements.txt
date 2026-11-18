@@ -5,3 +5,6 @@ scikit-image>=0.21
 # torch: trên Jetson hãy cài bản NVIDIA JetPack thay vì bản PyPI
 torch>=2.0
 lpips>=0.1.4
+# lightglue không có trên PyPI: cài từ GitHub (commit đã dùng để đo). Trọng số SuperPoint/LightGlue được tải lần chạy
+# đầu vào ~/.cache/torch/hub/checkpoints; chép sẵn thư mục này nếu máy chạy không có mạng.
+lightglue @ git+https://github.com/cvg/LightGlue.git@5a650c444718caffc2669dc0094cde908f42dd73
