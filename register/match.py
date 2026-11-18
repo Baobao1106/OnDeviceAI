@@ -22,8 +22,13 @@ import time
 
 
 def match_pair(kp_i, desc_i, kp_j, desc_j):
-    """Trả về (pts_i [M,2], pts_j [M,2], n_inliers) theo pixel ảnh gốc."""
-    raise NotImplementedError("B: viết khớp một cặp ảnh + RANSAC")
+    """Trả về (pts_i [M,2], pts_j [M,2], n_inliers) theo pixel ảnh gốc.
+
+    Khớp LightGlue + RootSIFT, gộp điểm khớp rồi RANSAC phép quay thuần (tiêu cự tự do). `desc_*` là kết quả
+    `features.extract(...)[1]`. `match_all` không gọi hàm này mà dùng cả quy trình bộ (xem `match_all`).
+    """
+    from .engine import get_engine
+    return get_engine().pair_inliers(desc_i, desc_j)
 
 
 def candidate_pairs(names):
@@ -32,11 +37,20 @@ def candidate_pairs(names):
 
 
 def match_all(images, feats, deadline):
+    """Khớp cả bộ: khớp các cặp, ước lượng MỘT tiêu cự chung rồi xác minh lại mọi cặp, cứu ảnh cô lập.
+
+    Cặp được chấp nhận khi có >= 10 inlier (chọn trên 10 bộ train; ngưỡng 15 ở trên chỉ là gợi ý) hoặc được cứu bằng
+    tiền nghiệm tầng (`rescued`). Mỗi cặp ngoài các khóa bắt buộc còn có `rotation` (R_ij, ray_i ≈ R @ ray_j,
+    cùng quy ước common.py) và `rescued`; module sau dùng được làm giá trị đầu, `slots.py` dùng để suy tầng.
+    """
+    from .engine import get_engine
+    names = sorted(images)
+    index = {n: k for k, n in enumerate(names)}
+    only = {tuple(sorted((index[a], index[b]))) for a, b in candidate_pairs(names)}
+    result = get_engine().match(names, [feats[n][1] for n in names], deadline, only)
     pairs = []
-    for a, b in candidate_pairs(images):
-        if time.time() > deadline:
-            break
-        pts_i, pts_j, n_in = match_pair(*feats[a], *feats[b])
-        if n_in >= 15:
-            pairs.append({"i": a, "j": b, "pts_i": pts_i.tolist(), "pts_j": pts_j.tolist(), "n_inliers": int(n_in)})
+    for p in result.accepted():
+        pts_i, pts_j = result.inlier_points[(p.i, p.j)]
+        pairs.append({"i": names[p.i], "j": names[p.j], "pts_i": pts_i.tolist(), "pts_j": pts_j.tolist(),
+                      "n_inliers": p.n_inliers, "rotation": p.rotation.round(6).tolist(), "rescued": p.rescued})
     return pairs
