@@ -30,5 +30,10 @@ def find_textureless(images, pairs):
 
 
 def place_textureless(images, pairs, slot_info, deadline):
-    """Trả về slot_info đã cập nhật cho các ảnh trơn."""
-    raise NotImplementedError("B: đặt ảnh trơn vào ô")
+    """Trả về slot_info đã cập nhật cho các ảnh trơn.
+
+    Hiện chưa cập nhật gì thêm: ảnh trơn đã được `match_all` cứu (nếu tiền nghiệm tầng đồng ý) và `assign_slots` đã
+    cho mọi ảnh còn lại một ô (confidence thấp). Căn chỉnh trực tiếp bằng cường độ ảnh đã thử trên s01 nhưng không
+    đủ tin cậy để chấp nhận (điểm của đáp án sai ngang đáp án đúng), nên chưa dùng.
+    """
+    return slot_info
