@@ -47,7 +47,7 @@ def match_all(images, feats, deadline):
     names = sorted(n for n in images if n in feats)      # ảnh trích đặc trưng lỗi hoặc hết giờ: coi như cô lập
     index = {n: k for k, n in enumerate(names)}
     only = {tuple(sorted((index[a], index[b]))) for a, b in candidate_pairs(names)}
-    result = get_engine().match(names, [feats[n][1] for n in names], deadline, only)
+    result = get_engine().match(names, [feats[n][1] for n in names], deadline, only, [images[n] for n in names])
     pairs = []
     for p in result.accepted():
         pts_i, pts_j = result.inlier_points[(p.i, p.j)]

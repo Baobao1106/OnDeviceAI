@@ -17,7 +17,7 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 
-from .matchers import IMG_W, build, preprocess
+from .matchers import IMG_W, build, locnorm_gray, preprocess
 from .rescue import rescue_isolated
 from .rotransac import estimate_shared_focal, rotation_ransac, run_ransac
 
@@ -37,6 +37,8 @@ class PipelineConfig:
     strong_inliers: int = 30        # độ tin cậy bão hòa ở đây
     workers: int = 0                # số tiến trình cho các bước RANSAC (0 = số nhân CPU, tối đa 6; 1 = không dùng pool)
     rescue: bool = True             # chấp nhận cặp yếu của ảnh cô lập khi tiền nghiệm tầng đồng ý
+    lowtex_pass: bool = True        # ảnh ít cặp: trích lại đặc trưng sau khi chuẩn hóa tương phản cục bộ, khớp lại
+    lowtex_degree: int = 2          # ảnh có ít hơn chừng này cặp được chấp nhận thì thuộc nhóm ít texture
 
 
 @dataclass(frozen=True)
@@ -51,6 +53,7 @@ class PairResult:
     rotation: np.ndarray | None     # R với ray_i ~ R @ ray_j (ảnh j -> ảnh i)
     cand_rotation: np.ndarray | None = None
     rescued: bool = False
+    boosted: bool = False           # được chấp nhận nhờ lượt ghép lại cho ảnh ít texture (chuẩn hóa tương phản cục bộ)
 
 
 @dataclass(frozen=True)
@@ -89,6 +92,10 @@ class PairEngine:
         """Đặc trưng của một ảnh: list theo từng nguồn (SuperPoint 4 hướng xoay, RootSIFT)."""
         return [m.extract(preprocess(bgr, True, clahe)) for m, clahe in self.sources]
 
+    def extract_lowtex(self, bgr):
+        """Như `extract` nhưng sau khi chuẩn hóa tương phản cục bộ (cho lượt ghép lại ảnh ít texture)."""
+        return [m.extract(locnorm_gray(bgr)) for m, _ in self.sources]
+
     def _pooled(self, fi, fj):
         parts = [m.match(a, b) for (m, _), a, b in zip(self.sources, fi, fj)]
         a = np.concatenate([p[0] for p in parts]).astype(np.float64)
@@ -101,8 +108,9 @@ class PairEngine:
         mask, _, _ = rotation_ransac(a, b, self.cfg.ransac_px)
         return a[mask].astype(np.float32), b[mask].astype(np.float32), int(mask.sum())
 
-    def match(self, names, feats, deadline=None, only=None):
+    def match(self, names, feats, deadline=None, only=None, images=None):
         """feats[k] = self.extract(ảnh names[k]). `only`: tập cặp chỉ số (i, j), i < j, cần khớp (mặc định: tất cả).
+        `images[k]`: ảnh BGR của names[k] (không bắt buộc); có thì ảnh ít texture được ghép lại sau chuẩn hóa cục bộ.
         Trả về PipelineResult."""
         t_start = time.perf_counter()
         if len(names) < 2:
@@ -110,14 +118,14 @@ class PairEngine:
         n_workers = self.cfg.workers or min(6, os.cpu_count() or 1)
         pool = ProcessPoolExecutor(max_workers=n_workers) if n_workers > 1 else None
         try:
-            return self._match(names, feats, deadline, only, pool, t_start)
+            return self._match(names, feats, deadline, only, images, pool, t_start)
         except BrokenProcessPool:     # không tạo được tiến trình con (ví dụ chạy từ stdin): làm tuần tự, kết quả như nhau
-            return self._match(names, feats, deadline, only, None, t_start)
+            return self._match(names, feats, deadline, only, images, None, t_start)
         finally:
             if pool is not None:
                 pool.shutdown()
 
-    def _match(self, names, feats, deadline, only, pool, t_start):
+    def _match(self, names, feats, deadline, only, images, pool, t_start):
         t1 = time.perf_counter()
         raw, jobs = {}, {}
         order = sorted(only) if only is not None else list(itertools.combinations(range(len(names)), 2))
@@ -161,6 +169,11 @@ class PairEngine:
                 inlier_points[(i, j)] = (a[mask].astype(np.float32), b[mask].astype(np.float32))
             elif pairs[-1].cand_rotation is not None:
                 cand_points[(i, j)] = (a[mask].astype(np.float32), b[mask].astype(np.float32))
+        t_low = time.perf_counter()
+        if self.cfg.lowtex_pass and images is not None and shared is not None:
+            pairs = self._lowtex_pass(names, feats, images, pairs, shared, only, deadline, pool, inlier_points,
+                                      cand_points)
+        t_low = time.perf_counter() - t_low
         if self.cfg.rescue:
             by_key = {(p.i, p.j): k for k, p in enumerate(pairs)}
             for r in rescue_isolated(names, pairs):
@@ -170,5 +183,58 @@ class PairEngine:
                                    hfov_deg=shared if shared is not None else pairs[k].hfov_deg)
                 inlier_points[(r.i, r.j)] = cand_points[(r.i, r.j)]
         timing = {"match_and_pass1": round(t_match, 2), "shared_focal_and_pass2": round(time.perf_counter() - t2, 2),
-                  "total_match": round(time.perf_counter() - t_start, 2)}
+                  "lowtex_pass": round(t_low, 2), "total_match": round(time.perf_counter() - t_start, 2)}
         return PipelineResult(list(names), pairs, inlier_points, timing, shared, self.cfg)
+
+    def _lowtex_pass(self, names, feats, images, pairs, shared, only, deadline, pool, inlier_points, cand_points):
+        """Ảnh có ít hơn `lowtex_degree` cặp được chấp nhận: trích đặc trưng lại sau chuẩn hóa tương phản cục bộ (cho
+        chúng và mọi ảnh còn lại), khớp các cặp có chúng, gộp với điểm khớp đã có và RANSAC với tiêu cự chung đã fit.
+        Chỉ nâng cặp chưa được chấp nhận; cặp đã chấp nhận giữ nguyên."""
+        n = len(names)
+        deg = np.zeros(n, int)
+        for p in pairs:
+            if p.accepted:
+                deg[p.i] += 1
+                deg[p.j] += 1
+        weak = [k for k in range(n) if deg[k] < self.cfg.lowtex_degree]
+        if not weak or len(weak) == n or (deadline is not None and time.time() > deadline):
+            return pairs
+        keys = sorted({(min(w, o), max(w, o)) for w in weak for o in range(n) if o != w
+                       and (only is None or (min(w, o), max(w, o)) in only)})
+        feats_low = {}
+        by_key = {(p.i, p.j): p for p in pairs}
+        old_raw = {}
+        jobs = {}
+        for i, j in keys:
+            if deadline is not None and time.time() > deadline:
+                break
+            try:
+                for k in (i, j):
+                    if k not in feats_low:
+                        feats_low[k] = self.extract_lowtex(images[k])
+                a, b = self._pooled(feats_low[i], feats_low[j])
+            except Exception:
+                print(f"[lowtex] bỏ cặp ({names[i]}, {names[j]}):", file=sys.stderr)
+                traceback.print_exc()
+                continue
+            args = (a, b, self.cfg.ransac_px, shared)
+            jobs[(i, j)] = ((a, b), pool.submit(run_ransac, args) if pool else run_ransac(args))
+        out = dict(by_key)
+        for key, ((a, b), job) in sorted(jobs.items()):
+            mask, rot, focal = job.result() if pool else job
+            n_inl = int(mask.sum())
+            old = by_key.get(key)
+            if rot is None or n_inl < CAND_MIN_INLIERS or (old is not None and (old.accepted or n_inl <= old.n_inliers)):
+                continue
+            ok = n_inl >= self.cfg.min_inliers
+            hfov = float(np.degrees(2 * np.arctan((IMG_W / 2) / focal))) if focal else None
+            n_raw = len(a) + (old.n_raw if old is not None else 0)
+            out[key] = PairResult(key[0], key[1], n_raw, n_inl, ok, min(1.0, n_inl / self.cfg.strong_inliers) if ok else 0.0,
+                                  hfov if ok else None, rot if ok else None, None if ok else rot, boosted=ok)
+            pts = (a[mask].astype(np.float32), b[mask].astype(np.float32))
+            if ok:
+                inlier_points[key] = pts
+                cand_points.pop(key, None)
+            else:
+                cand_points[key] = pts
+        return [out[k] for k in sorted(out)]

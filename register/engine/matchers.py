@@ -20,6 +20,17 @@ def preprocess(bgr, devignette=True, clahe=False):
     return gray
 
 
+def locnorm_gray(bgr):
+    """Ảnh xám đã bù vignetting, bỏ độ sáng trung bình cục bộ và chuẩn hóa độ tương phản cục bộ.
+    Làm lộ chuyển sắc và đường nhạt trên tường trắng (thí nghiệm trên ảnh cô lập: SIFT/SuperPoint thường không thấy gì)."""
+    g = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    g = np.clip(g / vignette_map(*g.shape[::-1]), 0, 255)
+    g = cv2.GaussianBlur(g, (0, 0), 1.2)
+    mean = cv2.GaussianBlur(g, (0, 0), 12)
+    std = np.sqrt(cv2.GaussianBlur((g - mean) ** 2, (0, 0), 12)) + 1.0
+    return np.clip(128 + 40 * (g - mean) / std, 0, 255).astype(np.uint8)
+
+
 class RootSift:
     name = "rootsift"
 
