@@ -59,6 +59,54 @@ class TestWeights(unittest.TestCase):
         finally:
             engine._ENGINE, engine._ERROR = saved
 
+    def _get_engine_with_fake_pairs(self, env=None, weights_missing=False):
+        """Gọi get_engine với PairEngine giả (ghi lại config) và trạng thái module đã đặt lại."""
+        import contextlib
+        import io
+        built = []
+
+        class Fake:
+            def __init__(self, config=None):
+                built.append(config)
+
+        saved = (engine._ENGINE, engine._ERROR, engine._MODE)
+        engine._ENGINE = engine._ERROR = engine._MODE = None
+        err = io.StringIO()
+        try:
+            patches = [mock.patch("register.engine.pairs.PairEngine", Fake), mock.patch.dict(os.environ, env or {})]
+            if weights_missing:
+                patches.append(mock.patch.object(weights, "use", side_effect=weights.WeightsMissing("thiếu test")))
+            with contextlib.ExitStack() as stack, contextlib.redirect_stderr(err):
+                for p in patches:
+                    stack.enter_context(p)
+                eng = engine.get_engine()
+                again = engine.get_engine()
+            return eng, again, built, engine.engine_mode(), err.getvalue()
+        finally:
+            engine._ENGINE, engine._ERROR, engine._MODE = saved
+
+    def test_missing_weights_fall_back_to_sift_only_once(self):
+        eng, again, built, mode, err = self._get_engine_with_fake_pairs(weights_missing=True)
+        self.assertEqual(mode, "sift-only")
+        self.assertIs(eng, again)
+        self.assertEqual(len(built), 1)                              # chỉ tạo một lần, không thử lại
+        self.assertFalse(built[0].use_superpoint)
+        self.assertTrue(built[0].use_sift)
+        self.assertIn("dự phòng", err)
+
+    def test_env_forces_sift_only_without_touching_weights(self):
+        eng, _, built, mode, err = self._get_engine_with_fake_pairs(env={engine.SIFT_ONLY_ENV: "1"})
+        self.assertEqual(mode, "sift-only")
+        self.assertFalse(built[0].use_superpoint)
+
+    def test_full_engine_when_weights_present(self):
+        with tempfile.TemporaryDirectory() as own:
+            make_weights(own)
+            eng, _, built, mode, err = self._get_engine_with_fake_pairs(env={weights.ENV_VAR: own})
+        self.assertEqual(mode, "full")
+        self.assertEqual(built, [None])                              # PairEngine() mặc định: SuperPoint + RootSIFT
+        self.assertEqual(err, "")
+
     def test_pinned_sizes_and_hashes_are_well_formed(self):
         for name, (size, sha, url) in weights.WEIGHTS.items():
             self.assertGreater(size, 1_000_000)
