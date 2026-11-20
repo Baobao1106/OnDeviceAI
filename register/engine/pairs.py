@@ -18,6 +18,7 @@ from dataclasses import dataclass, replace
 import numpy as np
 
 from .matchers import IMG_W, build, locnorm_gray, preprocess
+from .order import priority_order, split_deadline
 from .rescue import rescue_isolated
 from .rotransac import estimate_shared_focal, rotation_ransac, run_ransac
 
@@ -39,6 +40,8 @@ class PipelineConfig:
     rescue: bool = True             # chấp nhận cặp yếu của ảnh cô lập khi tiền nghiệm tầng đồng ý
     lowtex_pass: bool = True        # ảnh ít cặp: trích lại đặc trưng sau khi chuẩn hóa tương phản cục bộ, khớp lại
     lowtex_degree: int = 2          # ảnh có ít hơn chừng này cặp được chấp nhận thì thuộc nhóm ít texture
+    priority_order: bool = True     # khớp cặp theo điểm RootSIFT (mỗi ảnh được lo trước) thay vì ngẫu nhiên; chỉ khác khi thiếu giờ
+    lowtex_reserve: float = 0.15    # dành phần này của thời gian còn lại cho lượt ghép lại ảnh ít texture (0 = không dành)
 
 
 @dataclass(frozen=True)
@@ -96,8 +99,10 @@ class PairEngine:
         """Như `extract` nhưng sau khi chuẩn hóa tương phản cục bộ (cho lượt ghép lại ảnh ít texture)."""
         return [m.extract(locnorm_gray(bgr)) for m, _ in self.sources]
 
-    def _pooled(self, fi, fj):
-        parts = [m.match(a, b) for (m, _), a, b in zip(self.sources, fi, fj)]
+    def _pooled(self, fi, fj, cached=None):
+        """`cached`: {chỉ số nguồn: kết quả khớp đã có} (khớp RootSIFT làm sẵn khi sắp thứ tự), khỏi khớp lại."""
+        parts = [cached[s] if cached and s in cached else m.match(a, b)
+                 for s, ((m, _), a, b) in enumerate(zip(self.sources, fi, fj))]
         a = np.concatenate([p[0] for p in parts]).astype(np.float64)
         b = np.concatenate([p[1] for p in parts]).astype(np.float64)
         return a, b
@@ -130,11 +135,27 @@ class PairEngine:
         raw, jobs = {}, {}
         order = sorted(only) if only is not None else list(itertools.combinations(range(len(names)), 2))
         np.random.default_rng(0).shuffle(order)         # nếu hết giờ giữa chừng, mọi ảnh đều đã có một phần cặp
+        main_deadline = split_deadline(time.time(), deadline,
+                                       self.cfg.lowtex_reserve if self.cfg.lowtex_pass and images is not None else 0.0)
+        cache = {}
+        sift_idx = next((s for s, (m, _) in enumerate(self.sources) if m.name.startswith("rootsift")), None)
+        if self.cfg.priority_order and sift_idx is not None and len(self.sources) > 1:
+            score = {}
+            for i, j in sorted(order):                  # khớp RootSIFT (rẻ) cho mọi cặp, giữ lại để khỏi khớp hai lần
+                if main_deadline is not None and time.time() > main_deadline:
+                    break
+                try:
+                    res = self.sources[sift_idx][0].match(feats[i][sift_idx], feats[j][sift_idx])
+                except Exception:
+                    continue
+                cache[(i, j)] = {sift_idx: res}
+                score[(i, j)] = len(res[0])
+            order = priority_order(len(names), score, order)
         for i, j in order:
-            if deadline is not None and time.time() > deadline:
+            if main_deadline is not None and time.time() > main_deadline:
                 break                                   # dừng sớm: các cặp chưa khớp bị bỏ
             try:
-                a, b = self._pooled(feats[i], feats[j])
+                a, b = self._pooled(feats[i], feats[j], cache.get((i, j)))
             except Exception:                           # một cặp lỗi (ví dụ hết bộ nhớ GPU) không làm hỏng cả bộ
                 print(f"[match] bỏ cặp ({names[i]}, {names[j]}):", file=sys.stderr)
                 traceback.print_exc()

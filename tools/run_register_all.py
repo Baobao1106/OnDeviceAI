@@ -24,6 +24,8 @@ def main():
     ap.add_argument("--sets", nargs="*", default=["sets", "sets_s3d"])
     ap.add_argument("--work_name", default="all50")
     ap.add_argument("--no_lowtex", action="store_true", help="baseline: switch the low-texture re-matching off")
+    ap.add_argument("--no_priority", action="store_true", help="match pairs in random order instead of RootSIFT-score order (the order matters only when time runs out)")
+    ap.add_argument("--reserve", type=float, default=None, help="share of the remaining time kept for the low-texture re-matching pass (default: engine's)")
     ap.add_argument("--deadline", type=float, default=240.0,
                     help="seconds given to register.run; the stage itself may use half (REGISTER_SHARE). Smaller values "
                          "simulate a slower machine, e.g. 150 -> 75 s for the stage = a machine ~2x slower than 150 s")
@@ -34,10 +36,13 @@ def main():
     from register.engine import get_engine
     from schema import validate_matches, validate_slots
 
-    if a.no_lowtex:
+    if a.no_lowtex or a.no_priority or a.reserve is not None:
         import register.engine as engine_pkg
         from register.engine.pairs import PairEngine, PipelineConfig
-        engine_pkg._ENGINE = PairEngine(PipelineConfig(lowtex_pass=False))
+        defaults = PipelineConfig()
+        engine_pkg._ENGINE = PairEngine(PipelineConfig(
+            lowtex_pass=not a.no_lowtex, priority_order=not a.no_priority,
+            lowtex_reserve=defaults.lowtex_reserve if a.reserve is None else a.reserve))
     t0 = time.perf_counter()
     get_engine()
     load_s = time.perf_counter() - t0
