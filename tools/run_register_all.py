@@ -1,6 +1,6 @@
-"""Run register.run (repo D:/jetson_erp/jetson_erp) on every training set and score slots.json against the truth.
+"""Run register.run (repo = the folder holding tools/) on every training set and score slots.json against the truth.
 
-    python matching/run_register_all.py [--repo D:/jetson_erp/jetson_erp] [--out runs/register50.json]
+    python tools/run_register_all.py [--repo .] [--out runs/register50.json]
 Times are wall-clock seconds of register.run per set (the first set also pays the one-off model load, reported
 separately). Work files go to <repo>/work/all50/<set> (git-ignored).
 """
@@ -18,7 +18,7 @@ ROOT = os.path.dirname(HERE)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--repo", default="D:/jetson_erp/jetson_erp")
+    ap.add_argument("--repo", default=ROOT)
     ap.add_argument("--out", default="runs/register50.json")
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--sets", nargs="*", default=["sets", "sets_s3d"])
