@@ -13,6 +13,7 @@ import sys
 import time
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -24,7 +25,7 @@ from tools.pose_diff import true_rotations  # noqa: E402
 
 
 def truth_path(name):
-    for sets in ("sets", "sets_s3d"):
+    for sets in ("sets", "sets_s3d", "sets_extra"):
         p = os.path.join(ROOT, sets, name, "hidden", "true_poses.json")
         if os.path.exists(p):
             return p
@@ -38,7 +39,8 @@ def evaluate(poses, truth):
     reg = sorted(n for n, p in poses["images"].items() if p.get("registered", True) and n in tru)
     est = {n: np.asarray(poses["images"][n]["R"], float) for n in poses["images"]}
     A = procrustes([est[n] for n in reg], [tru[n] for n in reg], reject_deg=10.0)    # A @ est ≈ tru
-    err = {n: float(np.degrees(np.arccos(np.clip((np.trace(est[n].T @ A.T @ tru[n]) - 1) / 2, -1, 1)))) for n in tru}
+    # góc qua Rotation.magnitude (chiếu về SO(3) trước): công thức arccos((tr-1)/2) bị nhiễu ~0,05° nếu R lệch trực giao ~1e-6
+    err = {n: float(np.degrees(Rotation.from_matrix(est[n].T @ A.T @ tru[n]).magnitude())) for n in tru}
     up = A.T @ np.array([0.0, 1.0, 0.0])                                             # hướng lên thật trong hệ ước lượng
     return err, reg, float(np.degrees(np.arccos(np.clip(up[1], -1, 1)))), poses["hfov_deg"] - truth["hfov_deg"]
 
