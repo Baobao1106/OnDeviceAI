@@ -21,10 +21,19 @@ của bộ đó (run_eval.py --score) tăng.
 
 
 def find_textureless(images, pairs):
-    """Trả về list tên ảnh trơn."""
-    raise NotImplementedError("B: nhận diện ảnh trơn")
+    """Trả về list tên ảnh trơn: ảnh có ít hơn 2 cặp khớp được chấp nhận (đồ thị khớp bậc < 2)."""
+    degree = dict.fromkeys(images, 0)
+    for p in pairs:
+        degree[p["i"]] += 1
+        degree[p["j"]] += 1
+    return sorted(n for n, d in degree.items() if d < 2)
 
 
 def place_textureless(images, pairs, slot_info, deadline):
-    """Trả về slot_info đã cập nhật cho các ảnh trơn."""
-    raise NotImplementedError("B: đặt ảnh trơn vào ô")
+    """Trả về slot_info đã cập nhật cho các ảnh trơn.
+
+    Hiện chưa cập nhật gì thêm: ảnh trơn đã được `match_all` cứu (nếu tiền nghiệm tầng đồng ý) và `assign_slots` đã
+    cho mọi ảnh còn lại một ô (confidence thấp). Căn chỉnh trực tiếp bằng cường độ ảnh đã thử trên s01 nhưng không
+    đủ tin cậy để chấp nhận (điểm của đáp án sai ngang đáp án đúng), nên chưa dùng.
+    """
+    return slot_info

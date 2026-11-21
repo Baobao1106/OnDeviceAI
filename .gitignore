@@ -12,6 +12,8 @@ work/
 *.png
 !docs/*.png
 !sets/**/*.png
+!sets_s3d/**/*.png
+!panos/*.png
 *.pt
 *.pth
 *.onnx
