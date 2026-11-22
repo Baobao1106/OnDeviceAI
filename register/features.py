@@ -28,5 +28,15 @@ def load_images(images_dir):
 
 
 def extract(img_bgr):
-    """Trả về (keypoints: float32 [N,2] theo pixel, descriptors: float32 [N,D])."""
-    raise NotImplementedError("B: viết trích đặc trưng (RootSIFT)")
+    """Trả về (keypoints: float32 [N,2] theo pixel, descriptors).
+
+    Dùng lõi `register.engine` (SuperPoint 4 hướng xoay + RootSIFT ngưỡng tương phản thấp, bù vignetting, CLAHE).
+    `keypoints` là điểm RootSIFT (để xem/đếm); `descriptors` là gói đặc trưng của lõi (cả hai nguồn), chỉ
+    `match.py` dùng nên không cần là mảng [N,D].
+    """
+    import numpy as np
+
+    from .engine import get_engine
+    feats = get_engine().extract(img_bgr)
+    kp = next((f["kp"] for f in feats if isinstance(f, dict) and "kp" in f), np.zeros((0, 2), np.float32))
+    return kp, feats
