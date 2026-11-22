@@ -1,12 +1,3 @@
-"""Rescue isolated photos with the pitch-layer prior.
-
-A photo with no accepted pair usually has a few (4-9) RANSAC inliers with its true neighbours - too few to accept
-on their own, as wrong pairs reach that level too. The capture structure (5 pitch layers, roll within +-5 deg)
-filters them: a candidate pair places the photo at an absolute rotation in the frame of its neighbour's component,
-and that rotation must (a) keep the camera x axis horizontal, (b) give a pitch near a layer whose quota is free.
-A photo is rescued when the surviving candidates are strong (>= n_sure inliers) or two candidates of the same
-component agree on its rotation.
-"""
 from dataclasses import dataclass
 
 import numpy as np
@@ -16,11 +7,11 @@ from .layers import LAYER_PITCH, assign_layers, component_frames
 
 @dataclass(frozen=True)
 class RescueConfig:
-    n_min: int = 6              # weakest candidate considered
-    n_sure: int = 8             # a single candidate at least this strong is enough
-    tilt_deg: float = 8.0       # camera x axis must be this close to horizontal
+    n_min: int = 6
+    n_sure: int = 8
+    tilt_deg: float = 8.0
     pitch_tol_deg: float = 10.0
-    agree_deg: float = 3.0      # two candidates agree when the photo's rotation differs by less than this
+    agree_deg: float = 3.0
 
 
 @dataclass(frozen=True)
@@ -28,7 +19,7 @@ class RescuedPair:
     i: int
     j: int
     n_inliers: int
-    rotation: np.ndarray       # ray_i ~ R @ ray_j
+    rotation: np.ndarray
 
 
 def _angle_deg(R):
@@ -44,14 +35,14 @@ def rescue_isolated(names, pairs, cfg=None):
     for k in range(n):
         if k in A:
             continue
-        cands = []                                   # (comp, n, m, A_k, pair)
+        cands = []
         for p in pairs:
             if p.cand_rotation is None or p.n_inliers < cfg.n_min or k not in (p.i, p.j):
                 continue
             m = p.j if p.i == k else p.i
             if m not in A:
                 continue
-            r_mk = p.cand_rotation if p.i == m else p.cand_rotation.T       # image k -> image m
+            r_mk = p.cand_rotation if p.i == m else p.cand_rotation.T
             a_k = A[m] @ r_mk
             u = U[int(label[m])]
             tilt = abs(np.degrees(np.arcsin(np.clip(a_k[:, 0] @ u, -1, 1))))

@@ -1,9 +1,3 @@
-"""Run register.run (repo = the folder holding tools/) on every training set and score slots.json against the truth.
-
-    python tools/run_register_all.py [--repo .] [--out runs/register50.json]
-Times are wall-clock seconds of register.run per set (the first set also pays the one-off model load, reported
-separately). Work files go to <repo>/work/all50/<set> (git-ignored).
-"""
 import argparse
 import json
 import os

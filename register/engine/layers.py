@@ -1,16 +1,3 @@
-"""Assign every photo to one of the five capture layers (bottom / down / horizon / up / top).
-
-The 24 photos are taken on 5 pitch layers, 1 / 7 / 8 / 7 / 1 photos at about -90 / -45 / 0 / +45 / +90 deg
-(roll within +-5 deg). Input: the accepted pairs of a PipelineResult (relative rotations, ray_i ~ R @ ray_j).
-
-Per connected component of the pair graph:
-  1. absolute rotations from a maximum-inlier spanning tree (root = identity);
-  2. the world "up" axis u: with ~0 roll every camera's x axis is horizontal, so u is orthogonal to all x axes;
-     the pitch layers (prior) pick u when the photos of a component do not fix it (e.g. a pair that differs only in
-     pitch). The sign of u is the one that points along the cameras' up (y) axes;
-  3. pitch_i = asin(d_i . u) with d_i the optical axis, layer = nearest of -90/-45/0/45/90.
-Photos with no accepted pair cannot be placed: they get the layers whose 1/7/8/7/1 quota is not yet used up.
-"""
 from dataclasses import dataclass
 
 import numpy as np
@@ -20,20 +7,20 @@ from scipy.sparse.csgraph import breadth_first_order, connected_components, mini
 LAYER_NAMES = ("bottom", "down", "horizon", "up", "top")
 LAYER_PITCH = np.array([-90.0, -45.0, 0.0, 45.0, 90.0])
 LAYER_COUNTS = np.array([1, 7, 8, 7, 1])
-ROLL_SIGMA_DEG = 5.0        # camera x axis is horizontal within the roll jitter
-PITCH_SIGMA_DEG = 7.0       # photos sit within a few degrees of their layer pitch
-TRUNC = 3.0                 # truncated quadratic: photos that fit neither term cost TRUNC**2
+ROLL_SIGMA_DEG = 5.0
+PITCH_SIGMA_DEG = 7.0
+TRUNC = 3.0
 GRID_POINTS = 20000
 
 
 @dataclass(frozen=True)
 class LayerAssignment:
     index: int
-    layer: int | None           # 0..4 (see LAYER_NAMES) or None when it could not be placed
+    layer: int | None
     pitch_deg: float | None
     component: int
-    candidates: tuple           # possible layers: (layer,) when placed, else the layers with quota left
-    inferred: bool              # True when placed only by the quota argument (no matched pair)
+    candidates: tuple
+    inferred: bool
 
     def to_dict(self, names):
         return {"image": names[self.index], "index": self.index,
@@ -44,15 +31,13 @@ class LayerAssignment:
 
 
 def absolute_rotations(n, pairs):
-    """Rotation image k -> frame of its component root (ray_root = A_k @ ray_k), over accepted pairs.
-    Returns (A: dict k -> 3x3, component label per image). Isolated images get no entry."""
     acc = [p for p in pairs if p.accepted and p.rotation is not None]
     if not acc:
         return {}, np.arange(n)
     e = np.array([(p.i, p.j) for p in acc])
     w = np.array([1.0 / p.n_inliers for p in acc])
     g = coo_matrix((w, (e[:, 0], e[:, 1])), shape=(n, n)).tocsr()
-    tree = minimum_spanning_tree(g)                       # smallest 1/inliers = strongest pairs
+    tree = minimum_spanning_tree(g)
     n_comp, label = connected_components(g, directed=False)
     rot = {}
     for p in acc:
@@ -68,7 +53,6 @@ def absolute_rotations(n, pairs):
         A[k] = np.eye(3)
         for c in order[1:]:
             par = int(pred[c])
-            # ray_par = R[par, c] @ ray_c, so A_c = A_par @ R[par, c]
             A[int(c)] = A[par] @ rot[(par, int(c))]
         seen.update(int(c) for c in order)
     return A, label
@@ -85,15 +69,13 @@ _GRID = _fibonacci_sphere(GRID_POINTS)
 
 
 def _cost(U, X, D):
-    """Cost of candidate up axes U (K x 3) given camera x axes X and optical axes D (m x 3)."""
-    roll = np.degrees(np.arcsin(np.clip(U @ X.T, -1, 1))) / ROLL_SIGMA_DEG                  # K x m
+    roll = np.degrees(np.arcsin(np.clip(U @ X.T, -1, 1))) / ROLL_SIGMA_DEG
     pitch = np.degrees(np.arcsin(np.clip(U @ D.T, -1, 1)))
     layer = np.abs(pitch[..., None] - LAYER_PITCH).min(-1) / PITCH_SIGMA_DEG
     return (np.minimum(roll ** 2, TRUNC ** 2) + np.minimum(layer ** 2, TRUNC ** 2)).sum(1)
 
 
 def fit_up_axis(X, Y, D):
-    """Up axis (unit 3-vector) of a set of cameras given their x / y / optical axes in a common frame."""
     best = _GRID[np.argmin(_cost(_GRID, X, D))]
     a = np.cross(best, [1.0, 0.0, 0.0] if abs(best[0]) < 0.9 else [0.0, 1.0, 0.0])
     a /= np.linalg.norm(a)
@@ -107,7 +89,6 @@ def fit_up_axis(X, Y, D):
 
 
 def component_frames(n, pairs):
-    """(A, label, U): absolute rotations per image, component label per image, up axis per component label."""
     A, label = absolute_rotations(n, pairs)
     U = {}
     for comp in sorted({int(label[k]) for k in A}):
@@ -118,7 +99,6 @@ def component_frames(n, pairs):
 
 
 def assign_layers(names, pairs):
-    """Layer assignment for every image. `pairs`: PairResult list (accepted ones are used)."""
     n = len(names)
     A, label, U = component_frames(n, pairs)
     layer = [None] * n

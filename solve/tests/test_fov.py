@@ -1,4 +1,3 @@
-"""estimate_fov: scan of the shared horizontal FOV."""
 import unittest
 
 import _paths  # noqa: F401

@@ -1,4 +1,3 @@
-"""Import side effect: make the repo root (common, schema, solve) importable from the tests."""
 import os
 import sys
 

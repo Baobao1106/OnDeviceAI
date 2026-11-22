@@ -1,4 +1,3 @@
-"""Lượt ghép lại ảnh ít texture (PairEngine._lowtex_pass) với điểm khớp tổng hợp, không cần mô hình hay GPU."""
 import unittest
 
 import numpy as np
@@ -14,7 +13,7 @@ W, H = 864, 648
 
 def project(R_cam2world, dirs):
     f, cx, cy = common.intrinsics(W, H, HFOV)
-    c = dirs @ R_cam2world                              # world directions -> camera frame (R^T d)
+    c = dirs @ R_cam2world
     ok = c[:, 2] > 0.2
     x = c[:, 0] / np.where(ok, c[:, 2], 1) * f + cx
     y = -c[:, 1] / np.where(ok, c[:, 2], 1) * f + cy
@@ -23,7 +22,7 @@ def project(R_cam2world, dirs):
 
 
 def make_engine(rots, matches_for):
-    eng = PairEngine.__new__(PairEngine)                # không nạp mô hình
+    eng = PairEngine.__new__(PairEngine)
     eng.cfg = PipelineConfig(device="cpu", workers=1)
     eng.calls = []
 
@@ -31,7 +30,7 @@ def make_engine(rots, matches_for):
         eng.calls.append(1)
         return bgr
 
-    def pooled(fi, fj):                                 # điểm khớp tổng hợp theo tư thế thật
+    def pooled(fi, fj):
         i, j = fi, fj
         rng = np.random.default_rng(10 * i + j)
         d = rng.normal(size=(3000, 3))
@@ -60,7 +59,7 @@ class TestLowtexPass(unittest.TestCase):
         self.rots = [common.pose_to_R(y, p, r) for y, p, r in
                      [(0, 0, 0), (30, 3, 2), (-25, -2, 1), (5, 4, -2)]]
         self.names = ["a", "b", "c", "d"]
-        self.images = [0, 1, 2, 3]                      # "ảnh" là chỉ số; extract_lowtex trả lại chính nó
+        self.images = [0, 1, 2, 3]
 
     def pairs(self):
         return [accepted(0, 1, self.rots), accepted(0, 2, self.rots), accepted(1, 2, self.rots),
@@ -79,7 +78,7 @@ class TestLowtexPass(unittest.TestCase):
                                                              self.rots[key[1]]) - 1) / 2, -1, 1)))
             self.assertLess(err, 1.0)
         for key in ((0, 1), (0, 2), (1, 2)):
-            self.assertIs(by[key], before[[(p.i, p.j) for p in before].index(key)])   # không đụng cặp đã nhận
+            self.assertIs(by[key], before[[(p.i, p.j) for p in before].index(key)])
 
     def test_nothing_to_do_when_every_image_has_two_pairs(self):
         eng = make_engine(self.rots, lambda i, j: 60)
@@ -87,7 +86,7 @@ class TestLowtexPass(unittest.TestCase):
                 accepted(0, 3, self.rots), accepted(1, 3, self.rots), accepted(2, 3, self.rots)]
         out = eng._lowtex_pass(self.names, self.images, self.images, full, HFOV, None, None, None, {}, {})
         self.assertEqual(out, full)
-        self.assertEqual(eng.calls, [])                 # không trích lại đặc trưng nào
+        self.assertEqual(eng.calls, [])
 
     def test_too_few_matches_stay_rejected(self):
         eng = make_engine(self.rots, lambda i, j: 6 if 3 in (i, j) else 60)

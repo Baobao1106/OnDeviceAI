@@ -1,4 +1,3 @@
-"""register.run must always write valid matches.json / slots.json when a step fails or time runs out."""
 import contextlib
 import io
 import json
@@ -25,7 +24,6 @@ def fake_pairs():
 
 
 def run_register(deadline_in=240.0, **patches):
-    """Run register.run with patched steps; returns (matches, slots, stderr text)."""
     stack = contextlib.ExitStack()
     with stack, tempfile.TemporaryDirectory() as work, contextlib.redirect_stderr(io.StringIO()) as err:
         stack.enter_context(mock.patch.object(features, "load_images", return_value=IMAGES))
@@ -56,7 +54,7 @@ class TestResilience(unittest.TestCase):
         self.assertEqual(s["images"][NAMES[5]]["slot"], 5)
         self.assertTrue(all(v["confidence"] == 0.0 for v in s["images"].values()))
         self.assertIn("boom", err)
-        self.assertEqual(len(m["pairs"]), 1)                       # matching result is kept
+        self.assertEqual(len(m["pairs"]), 1)
 
     def test_match_step_fails_gives_no_pairs_but_valid_slots(self):
         m, s, err = run_register(**good(**{"match__match_all": {"side_effect": MemoryError("out of memory")}}))
@@ -80,7 +78,7 @@ class TestResilience(unittest.TestCase):
 
         m, s, err = run_register(**{"features__extract": {"side_effect": flaky},
                                     "match__match_all": {"side_effect": capture}})
-        self.assertEqual(seen["feats"], 23)                         # the failing image is treated as isolated
+        self.assertEqual(seen["feats"], 23)
         self.check_slots(s)
 
     def test_deadline_already_passed_stops_extraction(self):

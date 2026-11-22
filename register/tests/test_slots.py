@@ -1,4 +1,3 @@
-"""assign_slots on synthetic capture patterns (poses = capture_plan + hand-shake jitter, exact relative rotations)."""
 import unittest
 
 import numpy as np
@@ -9,10 +8,9 @@ from register import slots
 
 
 def synthetic_set(seed, drop=(), cut=()):
-    """images dict, pairs list, true slot per name. `drop`: images with no pair; `cut`: split these images from the rest."""
     rng = np.random.default_rng(seed)
     plan = common.capture_plan()
-    names = [f"img{rng.integers(1_000_000):06d}_{k}.jpg" for k in range(24)]          # shuffled order does not matter
+    names = [f"img{rng.integers(1_000_000):06d}_{k}.jpg" for k in range(24)]
     rots = [common.pose_to_R(y + rng.uniform(-5, 5), p + (0 if abs(p) == 90 else rng.uniform(-5, 5)),
                              rng.uniform(-5, 5)) for y, p in plan]
     pairs = []
@@ -21,7 +19,7 @@ def synthetic_set(seed, drop=(), cut=()):
             if a in drop or b in drop or ((a in cut) != (b in cut)):
                 continue
             ang = np.degrees(np.arccos(np.clip(rots[a][:, 2] @ rots[b][:, 2], -1, 1)))
-            if ang < 60:                                           # photos whose axes are close overlap
+            if ang < 60:
                 pairs.append({"i": names[a], "j": names[b], "n_inliers": 50, "rotation": (rots[a].T @ rots[b]).tolist()})
     return {n: None for n in names}, pairs, {n: k for k, n in enumerate(names)}
 
@@ -33,7 +31,7 @@ def layer(p):
 def yaw_residuals(got, truth, plan):
     ring = [n for n in got if abs(plan[truth[n]][1]) < 80]
     d = np.array([(got[n]["yaw_deg"] - plan[truth[n]][0] + 180) % 360 - 180 for n in ring])
-    shift = np.degrees(np.angle(np.exp(1j * np.radians(d)).mean()))      # heading is free: one global shift
+    shift = np.degrees(np.angle(np.exp(1j * np.radians(d)).mean()))
     return np.abs((d - shift + 180) % 360 - 180)
 
 

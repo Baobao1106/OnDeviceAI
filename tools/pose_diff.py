@@ -1,18 +1,3 @@
-"""So sánh pose ước lượng với pose thật. NGƯỜI PHỤ TRÁCH: D.
-
-Dùng để biết khi điểm thấp thì lỗi nằm ở pose (A, B) hay ở dựng ảnh (C).
-
-    python tools/pose_diff.py --poses work/t01/poses.json --truth sets/t01/hidden/true_poses.json
-
-Cách tính không phụ thuộc hệ quy chiếu (yaw tự do): tìm phép quay toàn cục khớp nhất giữa hai bộ pose,
-rồi đo góc lệch của từng ảnh. In ra sai số từng ảnh, trung bình, lớn nhất, và sai số FOV.
-
-Đã viết sẵn. VIỆC CẦN LÀM (D):
-  - Chạy cho cả 10 bộ rồi tổng hợp vào tools/results.md (cột: bộ, FOV lỗi, sai số pose TB, sai số pose max).
-  - Thêm mục kiểm tra ô: so `slots.json` với ô thật (tìm ô gần nhất của pose thật trong common.capture_plan())
-    để đếm bao nhiêu ảnh B gán đúng ô.
-  - Thêm cột nghiêng so với pose thật nếu muốn (score.py đã in tilt_deg).
-"""
 import argparse
 import os
 import sys
@@ -42,7 +27,7 @@ def compare(poses, truth):
     tru = true_rotations(truth)
     names = sorted(set(est) & set(tru))
     M = sum(est[n] @ tru[n].T for n in names)
-    A = project_so3(M)                      # est ≈ A @ tru
+    A = project_so3(M)
     rows = [(n, angle_deg(est[n].T @ A @ tru[n]), poses["images"][n].get("registered", True)) for n in names]
     return rows, poses["hfov_deg"] - truth["hfov_deg"]
 

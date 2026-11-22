@@ -1,4 +1,3 @@
-"""Thứ tự khớp cặp ưu tiên và chia hạn cho lượt ghép lại ảnh ít texture (hàm thuần, không cần mô hình)."""
 import itertools
 import unittest
 
@@ -10,7 +9,7 @@ ALL = list(itertools.combinations(range(N), 2))
 
 
 def scores():
-    return {p: (7 * p[0] + 3 * p[1]) % 11 for p in ALL}            # điểm giả, có nhiều cặp hòa
+    return {p: (7 * p[0] + 3 * p[1]) % 11 for p in ALL}
 
 
 class TestPriorityOrder(unittest.TestCase):
@@ -27,15 +26,15 @@ class TestPriorityOrder(unittest.TestCase):
     def test_every_image_gets_its_best_pair_before_any_image_gets_a_second(self):
         s = scores()
         out = priority_order(N, s)
-        head = set(out[:N])                                       # vòng đầu có tối đa N cặp
+        head = set(out[:N])
         for i in range(N):
             best = max(s[p] for p in ALL if i in p)
             self.assertTrue(any(i in p and s[p] == best for p in head), f"ảnh {i} chưa có cặp tốt nhất trong vòng đầu")
 
     def test_blind_image_is_still_served_early(self):
-        s = {p: (0 if 0 in p else 50) for p in ALL}              # ảnh 0 mù: mọi cặp của nó điểm 0
+        s = {p: (0 if 0 in p else 50) for p in ALL}
         head = priority_order(N, s)[:N]
-        self.assertTrue(any(0 in p for p in head))                # vẫn có ít nhất một cặp của ảnh 0 trong vòng đầu
+        self.assertTrue(any(0 in p for p in head))
 
     def test_is_deterministic(self):
         self.assertEqual(priority_order(N, scores(), seed=3), priority_order(N, scores(), seed=3))
@@ -64,8 +63,8 @@ class TestSplitDeadline(unittest.TestCase):
         self.assertAlmostEqual(split_deadline(100.0, 200.0, 0.2), 180.0)
 
     def test_reserve_is_capped_and_past_deadline_is_safe(self):
-        self.assertAlmostEqual(split_deadline(100.0, 200.0, 5.0), 110.0)    # tối đa 0,9
-        self.assertEqual(split_deadline(100.0, 50.0, 0.3), 100.0)           # hạn đã qua: không lùi về quá khứ
+        self.assertAlmostEqual(split_deadline(100.0, 200.0, 5.0), 110.0)
+        self.assertEqual(split_deadline(100.0, 50.0, 0.3), 100.0)
 
 
 if __name__ == "__main__":

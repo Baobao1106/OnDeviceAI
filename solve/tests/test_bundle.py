@@ -1,4 +1,3 @@
-"""bundle_adjust: global poses + FOV from pairwise matches."""
 import time
 import unittest
 
@@ -33,7 +32,7 @@ class TestBundle(unittest.TestCase):
         self.assertFalse(p["registered"])
         self.assertEqual(p["source"], "slot_prior")
         errs, _ = _synth.pose_errors(poses, truth)
-        self.assertLess(errs["img05.jpg"], 9.0)                      # jitter is +-5 deg per axis
+        self.assertLess(errs["img05.jpg"], 9.0)
         self.assertTrue(all(poses[n]["registered"] for n in poses if n != "img05.jpg"))
 
     def test_all_poses_are_rotations_and_cover_every_image(self):

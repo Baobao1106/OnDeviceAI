@@ -1,4 +1,3 @@
-"""Tìm trọng số trong thư mục dự án và lỗi một lần khi thiếu (không cần mô hình hay mạng)."""
 import os
 import tempfile
 import unittest
@@ -55,12 +54,11 @@ class TestWeights(unittest.TestCase):
                 for _ in range(3):
                     with self.assertRaises(RuntimeError):
                         engine.get_engine()
-            self.assertEqual(len(calls), 1)             # lần sau ném lại lỗi cũ, không tạo lại mô hình
+            self.assertEqual(len(calls), 1)
         finally:
             engine._ENGINE, engine._ERROR = saved
 
     def _get_engine_with_fake_pairs(self, env=None, weights_missing=False):
-        """Gọi get_engine với PairEngine giả (ghi lại config) và trạng thái module đã đặt lại."""
         import contextlib
         import io
         built = []
@@ -89,7 +87,7 @@ class TestWeights(unittest.TestCase):
         eng, again, built, mode, err = self._get_engine_with_fake_pairs(weights_missing=True)
         self.assertEqual(mode, "sift-only")
         self.assertIs(eng, again)
-        self.assertEqual(len(built), 1)                              # chỉ tạo một lần, không thử lại
+        self.assertEqual(len(built), 1)
         self.assertFalse(built[0].use_superpoint)
         self.assertTrue(built[0].use_sift)
         self.assertIn("dự phòng", err)
@@ -104,7 +102,7 @@ class TestWeights(unittest.TestCase):
             make_weights(own)
             eng, _, built, mode, err = self._get_engine_with_fake_pairs(env={weights.ENV_VAR: own})
         self.assertEqual(mode, "full")
-        self.assertEqual(built, [None])                              # PairEngine() mặc định: SuperPoint + RootSIFT
+        self.assertEqual(built, [None])
         self.assertEqual(err, "")
 
     def test_pinned_sizes_and_hashes_are_well_formed(self):

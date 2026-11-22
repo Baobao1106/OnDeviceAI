@@ -1,21 +1,3 @@
-"""Đo thời gian từng khâu. NGƯỜI PHỤ TRÁCH: D.
-
-Đã có sẵn bộ đo thời gian đơn giản để cả nhóm dùng ngay. `run.py` đã bọc từng stage bằng `Timer`
-và ghi `work/<bộ>/timing.json`.
-
-Cách dùng trong code của mọi người:
-    from tools.bench import Timer
-    timer = Timer()
-    with timer("extract_features"):
-        ...
-    timer.report()
-
-VIỆC CẦN LÀM (D):
-  - Chạy cả 10 bộ trên Jetson (MAXN SUPER), tổng hợp timing.json thành bảng: khâu nào chiếm bao nhiêu giây.
-  - Báo cáo cho cả nhóm 2–3 khâu chậm nhất, rồi cùng chủ module đó giảm (giảm độ phân giải khi khớp,
-    chạy GPU, cache, FP16/TensorRT nếu dùng mạng học sâu).
-  - Nhớ thời gian chấm tính cả load model, nên đo cả phần import và load model.
-"""
 import json
 import time
 from contextlib import contextmanager

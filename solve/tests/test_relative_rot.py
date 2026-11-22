@@ -1,4 +1,3 @@
-"""relative_rotation: RANSAC + Kabsch on one pair of the synthetic capture."""
 import unittest
 
 import numpy as np

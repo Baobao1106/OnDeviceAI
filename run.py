@@ -1,21 +1,3 @@
-"""Điểm vào của cả pipeline. NGƯỜI PHỤ TRÁCH: A.
-
-    python run.py --images <thư mục 24 ảnh> --out <result.png>
-
-Luồng: register (B) -> solve (A) -> render (C). Mỗi stage đọc/ghi JSON trong thư mục làm việc.
-Định dạng: docs/INTERFACES.md.
-
-Quy tắc an toàn (đừng bỏ):
-  - Luôn ghi ra một PNG 2048x1024 hợp lệ, kể cả khi stage lỗi (sai kích thước là 0 điểm, thiếu file là lỗi).
-  - Có 'deadline' (mặc định 240 giây kể từ lúc chạy). Mỗi stage phải kiểm tra time.time() < deadline và
-    tự dừng sớm với kết quả tốt nhất hiện có, vì quá 300 giây là 0 điểm.
-  - Stage chưa viết (NotImplementedError) thì bỏ qua, rồi dùng phương án dự phòng.
-
-VIỆC CẦN LÀM (A):
-  1. Chốt và giữ ổn định giao diện 3 file JSON (schema.py).
-  2. Khi register/solve/render có code thật, kiểm tra chạy hết 10 bộ không lỗi.
-  3. Khi có pose nhưng stage render lỗi, cân nhắc phương án dự phòng tốt hơn ảnh xám.
-"""
 import argparse
 import os
 import sys
@@ -33,7 +15,6 @@ TIME_BUDGET_S = 240.0
 
 
 def run_stage(name, fn, timer, *args):
-    """Chạy một stage, trả về True nếu thành công. Không để lỗi làm sập cả pipeline."""
     try:
         with timer(name):
             fn(*args)
@@ -47,7 +28,6 @@ def run_stage(name, fn, timer, *args):
 
 
 def write_fallback(out_png):
-    """Ảnh xám đúng kích thước, để không bị 0 điểm vì sai kích thước hoặc thiếu file."""
     img = np.full((OUT_H, OUT_W, 3), 128, np.uint8)
     cv2.imwrite(out_png, img)
 

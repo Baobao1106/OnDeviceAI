@@ -1,4 +1,3 @@
-"""Feature extraction + pair matching back-ends. Each matcher: extract(gray)->feat, match(fa, fb)->(pa, pb, score)."""
 import cv2
 import numpy as np
 
@@ -6,7 +5,6 @@ IMG_W, IMG_H = 864, 648
 
 
 def vignette_map(w=IMG_W, h=IMG_H):
-    """Vignetting model used by make_set.py (1 - 0.18 r^2); divided out before detection."""
     xs, ys = np.meshgrid(np.linspace(-1, 1, w), np.linspace(-1, 1, h) * h / w)
     return (1.0 - 0.18 * (xs ** 2 + ys ** 2)).astype(np.float32)
 
@@ -21,8 +19,6 @@ def preprocess(bgr, devignette=True, clahe=False):
 
 
 def locnorm_gray(bgr):
-    """Ảnh xám đã bù vignetting, bỏ độ sáng trung bình cục bộ và chuẩn hóa độ tương phản cục bộ.
-    Làm lộ chuyển sắc và đường nhạt trên tường trắng (thí nghiệm trên ảnh cô lập: SIFT/SuperPoint thường không thấy gì)."""
     g = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
     g = np.clip(g / vignette_map(*g.shape[::-1]), 0, 255)
     g = cv2.GaussianBlur(g, (0, 0), 1.2)
@@ -40,7 +36,7 @@ class RootSift:
         self.ratio = ratio
         self.device = device
         self.torch = None
-        if device != "cpu":     # descriptor matching on the GPU (same ratio test + mutual check as the CPU path)
+        if device != "cpu":
             import torch
             self.torch = torch
 
@@ -117,8 +113,6 @@ class SuperPointLightGlue:
 
 
 class SuperPointLightGlueRot(SuperPointLightGlue):
-    """SuperPoint is not rotation invariant: also extract on the image rotated by 90/180/270 deg and,
-    per pair, keep the rotation of image B that yields most matches (keypoints mapped back to B's frame)."""
     name = "superpoint_lightglue_rot"
 
     def extract(self, gray):
@@ -150,8 +144,6 @@ class SuperPointLightGlueRot(SuperPointLightGlue):
 
 
 class LoFTRRot:
-    """Dense detector-free matcher (kornia LoFTR, indoor weights) with 4-way rotation of image B.
-    Images are resized to 640x480; the rotation with most confident matches is kept."""
     name = "loftr_rot"
     SIZE_SCALE = 640.0 / IMG_W
 
@@ -187,7 +179,7 @@ class LoFTRRot:
 def build(method, device="cpu", **kw):
     if method == "rootsift":
         return RootSift()
-    if method == "rootsift_lowc":   # lower contrast threshold: more keypoints on flat walls
+    if method == "rootsift_lowc":
         return RootSift(n_features=8000, contrast=0.01, device=device)
     if method == "loftr_rot":
         return LoFTRRot(device=device, **kw)

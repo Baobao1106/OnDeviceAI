@@ -1,4 +1,3 @@
-"""Synthetic capture for solve tests: true poses = capture plan + hand-shake jitter, matches from random 3D directions."""
 import numpy as np
 
 import common
@@ -7,7 +6,6 @@ SIZE = (864, 648)
 
 
 def make_scene(seed=0, hfov=74.0, noise_px=0.3, jitter=5.0, n_dirs=6000, min_pts=12, drop=()):
-    """Return (matches, slots, truth) in the formats of docs/INTERFACES.md. `drop`: image indices with no pair at all."""
     rng = np.random.default_rng(seed)
     plan = common.capture_plan()
     names = [f"img{k:02d}.jpg" for k in range(24)]
@@ -38,7 +36,7 @@ def make_scene(seed=0, hfov=74.0, noise_px=0.3, jitter=5.0, n_dirs=6000, min_pts
 
 
 def _project(R, dirs, f, cx, cy, size):
-    c = dirs @ R                                    # camera coordinates: R.T @ d for each row d
+    c = dirs @ R
     ok = c[:, 2] > 0.2
     x = f * c[:, 0] / np.where(ok, c[:, 2], 1) + cx
     y = cy - f * c[:, 1] / np.where(ok, c[:, 2], 1)
@@ -49,7 +47,6 @@ def _project(R, dirs, f, cx, cy, size):
 
 
 def pose_errors(poses, truth):
-    """Per-image angle (deg) between estimated and true rotation after the best global rotation (yaw/tilt free)."""
     names = sorted(truth["R"])
     est = {n: np.asarray(poses[n]["R"], float) for n in names}
     M = sum(est[n] @ truth["R"][n].T for n in names)
@@ -60,6 +57,5 @@ def pose_errors(poses, truth):
 
 
 def tilt_deg(A):
-    """Angle between the estimated frame up axis (0,1,0) and the true up expressed in that frame (A @ (0,1,0))."""
     up = A @ np.array([0.0, 1.0, 0.0])
     return float(np.degrees(np.arccos(np.clip(up[1], -1, 1))))

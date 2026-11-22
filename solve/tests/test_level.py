@@ -1,4 +1,3 @@
-"""Levelling: the up axis from the capture structure, then every pose rotated so up = +y."""
 import time
 import unittest
 
@@ -12,7 +11,6 @@ Y = np.array([0.0, 1.0, 0.0])
 
 
 def tilted_scene(seed, tilt_deg, axis_deg=30.0):
-    """Synthetic scene whose whole frame is rotated, so the true up is NOT +y in the frame the solver sees."""
     matches, slots, truth = _synth.make_scene(seed=seed)
     a = np.radians(axis_deg)
     ax = np.array([np.cos(a), 0.0, np.sin(a)])

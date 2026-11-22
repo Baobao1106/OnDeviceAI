@@ -1,18 +1,3 @@
-"""Dựng ảnh ERP bằng POSE THẬT. NGƯỜI PHỤ TRÁCH: D (dùng chung với C).
-
-    python tools/oracle_render.py --set sets/t01 --out runs/oracle/t01.png [--score]
-
-Dùng pose thật trong hidden/true_poses.json thay cho pose do A tính, rồi chạy stage render của C. Kết quả là
-TRẦN ĐIỂM của stage render: nếu điểm thấp ở đây thì lỗi nằm ở render/ (vignette, gain, warp, blend), không phải
-ở pose. C dùng lệnh này hằng ngày để cải thiện phần mình mà không phải chờ A và B.
-
-Trong hệ khung của ảnh đáp án (gt.png), R_camera->world chính là pose_to_R(yaw, pitch, roll) của pose thật
-(phần xoay hướng nguồn đã được gỡ khi tạo gt), nên ảnh dựng ra đã đúng hướng, không cần căn yaw.
-
---score: chạy score.py (cần torch, lpips). Không có thì chỉ in PSNR nhanh (đã bù gain mỗi kênh, bỏ qua sàn −60°).
-
-VIỆC CẦN LÀM (D): chạy cho cả 10 bộ, ghi trần điểm vào tools/results.md, báo cho C phần nào còn lệch nhiều.
-"""
 import argparse
 import os
 import subprocess
@@ -45,7 +30,7 @@ def quick_psnr(pred_png, set_dir):
     pred = cv2.imread(pred_png).astype(np.float64)
     if pred.shape != gt.shape:
         return None
-    for c in range(3):  # một gain mỗi kênh, như bộ chấm điểm
+    for c in range(3):
         p, t = pred[..., c][mask], gt[..., c][mask]
         pred[..., c] *= (p * t).sum() / max((p * p).sum(), 1e-9)
     mse = ((np.clip(pred, 0, 255) - gt)[mask] ** 2).mean()

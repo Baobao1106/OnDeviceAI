@@ -30,7 +30,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--no-download", action="store_true", help="chỉ chép từ thư mục đệm PyTorch, không dùng mạng")
     a = ap.parse_args(argv)
-    for stream in (sys.stdout, sys.stderr):          # console Windows có thể không in được tiếng Việt: không để in lỗi làm hỏng
+    for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(errors="replace")
     import torch
     dest_dir = os.path.join(weights_dir(), "checkpoints")

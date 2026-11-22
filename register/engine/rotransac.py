@@ -1,15 +1,8 @@
-"""RANSAC for a pure camera rotation with a shared focal length (3 DoF + f) instead of a free homography (8 DoF).
-
-Match (a in image A, b in image B) satisfies  ray_a ~ R * ray_b  with ray = K^-1 [x, y, 1].
-Minimal sample = 2 matches (Kabsch on 2 bearing pairs). f is scanned over the allowed hfov range.
-Returns the inlier mask, R (B -> A), and the focal length chosen. `hfovs` overrides the scanned range
-(pass a single value to use one shared focal length for every pair).
-"""
 import numpy as np
 
 IMG_W, IMG_H = 864, 648
 CX, CY = (IMG_W - 1) / 2, (IMG_H - 1) / 2
-HFOVS = np.arange(71.0, 78.01, 0.5)   # slightly wider than the 72-77 deg of the task
+HFOVS = np.arange(71.0, 78.01, 0.5)
 
 
 def _bearings(pts, f):
@@ -18,7 +11,6 @@ def _bearings(pts, f):
 
 
 def _kabsch_batch(A, B):
-    """Rotations R_k with R_k @ B_k ~ A_k for stacks of correspondences A, B of shape (K, m, 3)."""
     M = np.einsum("kmi,kmj->kij", A, B)
     U, _, Vt = np.linalg.svd(M)
     d = np.sign(np.linalg.det(U @ Vt))
@@ -29,7 +21,6 @@ def _kabsch_batch(A, B):
 
 
 def _errors(R, a_pts, B, f):
-    """Pixel error in image A of matches rotated by R (inf where behind the camera). R: (K,3,3), B: (n,3)."""
     rb = np.einsum("kij,nj->kni", R, B)
     z = rb[..., 2]
     ok = z > 1e-6
@@ -58,7 +49,7 @@ def rotation_ransac(pa, pb, px_thr=3.0, iters=200, seed=0, hfovs=None):
         if cnt[k] > best_cnt:
             mask = _errors(R[k:k + 1], pa, B, f)[0] < px_thr
             Rk = R[k]
-            for _ in range(2):   # least-squares refinement on the inliers
+            for _ in range(2):
                 if mask.sum() < 3:
                     break
                 Rk = _kabsch_batch(A[mask][None], B[mask][None])[0]
@@ -69,22 +60,16 @@ def rotation_ransac(pa, pb, px_thr=3.0, iters=200, seed=0, hfovs=None):
 
 
 def _inlier_count(args):
-    """Inliers of one pair at one fixed hfov (top-level so a process pool can run it)."""
     pa, pb, px_thr, hfov = args
     return int(rotation_ransac(pa, pb, px_thr, hfovs=hfov)[0].sum())
 
 
 def run_ransac(args):
-    """rotation_ransac(*args) with positional args (top-level so a process pool can run it)."""
     pa, pb, px_thr, hfovs = args
     return rotation_ransac(pa, pb, px_thr, hfovs=hfovs)
 
 
 def estimate_shared_focal(pair_matches, px_thr=3.0, top_k=40, coarse=0.5, fine=0.1, pool=None):
-    """One focal length (as hfov, deg) for all pairs: the value that maximises the total number of rotation-model
-    inliers over the strongest pairs. pair_matches: list of (pa, pb) arrays, ideally already-verified pairs.
-    Coarse scan over the allowed range, then a fine scan around the best coarse value. None if no pair given.
-    `pool`: optional concurrent.futures executor; same result, evaluated in parallel."""
     if not pair_matches:
         return None
     strongest = sorted(pair_matches, key=lambda m: -len(m[0]))[:top_k]

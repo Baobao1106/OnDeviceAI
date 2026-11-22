@@ -1,11 +1,3 @@
-"""Chạy stage solve trên matches.json/slots.json đã có (từ register) của các bộ có đáp án rồi so với pose thật.
-
-    python tools/run_solve_all.py --from_work work/commit240 [--only t01 s20] [--out work/solve_eval]
-
-Với mỗi bộ: sai số FOV, sai số pose TB/max của ảnh đã đăng ký (yaw tự do, như tools/pose_diff.py), góc nghiêng so với
-hướng lên thật (>= 5° là 0 điểm), số ảnh đã đăng ký và thời gian. Không đụng vào thư mục của register: chép
-matches.json/slots.json sang `--out/<bộ>` rồi giải ở đó.
-"""
 import argparse
 import os
 import shutil
@@ -33,15 +25,12 @@ def truth_path(name):
 
 
 def evaluate(poses, truth):
-    """Sai số so với pose thật. Khớp hệ (yaw tự do) chỉ bằng ảnh đã đăng ký, bỏ ảnh lệch > 10° (ảnh ở cực dễ sai hướng
-    quanh trục đứng); nghiêng = góc giữa trục y của hệ ước lượng và hướng lên thật viết trong hệ đó."""
     tru = true_rotations(truth)
     reg = sorted(n for n, p in poses["images"].items() if p.get("registered", True) and n in tru)
     est = {n: np.asarray(poses["images"][n]["R"], float) for n in poses["images"]}
-    A = procrustes([est[n] for n in reg], [tru[n] for n in reg], reject_deg=10.0)    # A @ est ≈ tru
-    # góc qua Rotation.magnitude (chiếu về SO(3) trước): công thức arccos((tr-1)/2) bị nhiễu ~0,05° nếu R lệch trực giao ~1e-6
+    A = procrustes([est[n] for n in reg], [tru[n] for n in reg], reject_deg=10.0)
     err = {n: float(np.degrees(Rotation.from_matrix(est[n].T @ A.T @ tru[n]).magnitude())) for n in tru}
-    up = A.T @ np.array([0.0, 1.0, 0.0])                                             # hướng lên thật trong hệ ước lượng
+    up = A.T @ np.array([0.0, 1.0, 0.0])
     return err, reg, float(np.degrees(np.arccos(np.clip(up[1], -1, 1)))), poses["hfov_deg"] - truth["hfov_deg"]
 
 

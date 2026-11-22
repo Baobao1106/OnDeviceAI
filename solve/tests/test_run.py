@@ -1,4 +1,3 @@
-"""solve.run end to end on synthetic files in a temp work dir."""
 import os
 import tempfile
 import time

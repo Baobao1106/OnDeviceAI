@@ -1,11 +1,3 @@
-"""Lõi ghép cặp: đặc trưng từng ảnh -> khớp mọi cặp -> RANSAC phép quay thuần với FOV chung -> cứu ảnh cô lập.
-
-Đây là bản của `matching/pipeline.py` (code đã đo trên 50 bộ train) tách thành các bước mà `register/` gọi:
-  PairEngine.extract(bgr)               đặc trưng của MỘT ảnh (gọi cho từng ảnh)
-  PairEngine.pair_inliers(fi, fj)       khớp MỘT cặp + RANSAC (FOV tự do), cho `match.match_pair`
-  PairEngine.match(names, feats, dl)    khớp cả bộ: lượt 1, FOV chung, lượt 2, cứu ảnh cô lập
-Thuật toán và tham số giữ nguyên; chỉ thêm kiểm tra `deadline`.
-"""
 import itertools
 import os
 import sys
@@ -22,26 +14,26 @@ from .order import priority_order, split_deadline
 from .rescue import rescue_isolated
 from .rotransac import estimate_shared_focal, rotation_ransac, run_ransac
 
-CAND_MIN_INLIERS = 4            # cặp bị loại có ít nhất chừng này inlier giữ lại góc quay để cứu (rescue)
+CAND_MIN_INLIERS = 4
 
 
 @dataclass(frozen=True)
 class PipelineConfig:
-    device: str = "auto"            # "auto" -> cuda nếu có
+    device: str = "auto"
     use_superpoint: bool = True
     use_sift: bool = True
     sp_max_keypoints: int = 2048
     sp_clahe: bool = True
-    min_inliers: int = 10           # ngưỡng chấp nhận một cặp (chọn trên 10 bộ train)
+    min_inliers: int = 10
     ransac_px: float = 3.0
-    shared_focal: bool = True       # fit một tiêu cự chung trên các cặp mạnh rồi ước lượng lại mọi cặp
-    strong_inliers: int = 30        # độ tin cậy bão hòa ở đây
-    workers: int = 0                # số tiến trình cho các bước RANSAC (0 = số nhân CPU, tối đa 6; 1 = không dùng pool)
-    rescue: bool = True             # chấp nhận cặp yếu của ảnh cô lập khi tiền nghiệm tầng đồng ý
-    lowtex_pass: bool = True        # ảnh ít cặp: trích lại đặc trưng sau khi chuẩn hóa tương phản cục bộ, khớp lại
-    lowtex_degree: int = 2          # ảnh có ít hơn chừng này cặp được chấp nhận thì thuộc nhóm ít texture
-    priority_order: bool = True     # khớp cặp theo điểm RootSIFT (mỗi ảnh được lo trước) thay vì ngẫu nhiên; chỉ khác khi thiếu giờ
-    lowtex_reserve: float = 0.15    # dành phần này của thời gian còn lại cho lượt ghép lại ảnh ít texture (0 = không dành)
+    shared_focal: bool = True
+    strong_inliers: int = 30
+    workers: int = 0
+    rescue: bool = True
+    lowtex_pass: bool = True
+    lowtex_degree: int = 2
+    priority_order: bool = True
+    lowtex_reserve: float = 0.15
 
 
 @dataclass(frozen=True)
@@ -53,19 +45,19 @@ class PairResult:
     accepted: bool
     confidence: float
     hfov_deg: float | None
-    rotation: np.ndarray | None     # R với ray_i ~ R @ ray_j (ảnh j -> ảnh i)
+    rotation: np.ndarray | None
     cand_rotation: np.ndarray | None = None
     rescued: bool = False
-    boosted: bool = False           # được chấp nhận nhờ lượt ghép lại cho ảnh ít texture (chuẩn hóa tương phản cục bộ)
+    boosted: bool = False
 
 
 @dataclass(frozen=True)
 class PipelineResult:
     names: list
-    pairs: list                      # list[PairResult]
-    inlier_points: dict              # (i, j) -> (pts_i, pts_j) inlier RANSAC, chỉ cặp được chấp nhận
+    pairs: list
+    inlier_points: dict
     timing: dict
-    hfov_estimate: float | None      # FOV chung đã fit (độ), None nếu không có cặp mạnh nào
+    hfov_estimate: float | None
     config: PipelineConfig
 
     def accepted(self):
@@ -81,7 +73,7 @@ class PairEngine:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
         t0 = time.perf_counter()
-        self.sources = []           # (matcher, clahe)
+        self.sources = []
         if self.cfg.use_superpoint:
             self.sources.append((build("superpoint_lightglue_rot", device, max_kp=self.cfg.sp_max_keypoints),
                                  self.cfg.sp_clahe))
@@ -92,15 +84,12 @@ class PairEngine:
         self.load_time = time.perf_counter() - t0
 
     def extract(self, bgr):
-        """Đặc trưng của một ảnh: list theo từng nguồn (SuperPoint 4 hướng xoay, RootSIFT)."""
         return [m.extract(preprocess(bgr, True, clahe)) for m, clahe in self.sources]
 
     def extract_lowtex(self, bgr):
-        """Như `extract` nhưng sau khi chuẩn hóa tương phản cục bộ (cho lượt ghép lại ảnh ít texture)."""
         return [m.extract(locnorm_gray(bgr)) for m, _ in self.sources]
 
     def _pooled(self, fi, fj, cached=None):
-        """`cached`: {chỉ số nguồn: kết quả khớp đã có} (khớp RootSIFT làm sẵn khi sắp thứ tự), khỏi khớp lại."""
         parts = [cached[s] if cached and s in cached else m.match(a, b)
                  for s, ((m, _), a, b) in enumerate(zip(self.sources, fi, fj))]
         a = np.concatenate([p[0] for p in parts]).astype(np.float64)
@@ -108,15 +97,11 @@ class PairEngine:
         return a, b
 
     def pair_inliers(self, fi, fj):
-        """Khớp một cặp + RANSAC phép quay (tiêu cự tự do). Trả về (pts_i, pts_j, n_inliers)."""
         a, b = self._pooled(fi, fj)
         mask, _, _ = rotation_ransac(a, b, self.cfg.ransac_px)
         return a[mask].astype(np.float32), b[mask].astype(np.float32), int(mask.sum())
 
     def match(self, names, feats, deadline=None, only=None, images=None):
-        """feats[k] = self.extract(ảnh names[k]). `only`: tập cặp chỉ số (i, j), i < j, cần khớp (mặc định: tất cả).
-        `images[k]`: ảnh BGR của names[k] (không bắt buộc); có thì ảnh ít texture được ghép lại sau chuẩn hóa cục bộ.
-        Trả về PipelineResult."""
         t_start = time.perf_counter()
         if len(names) < 2:
             return PipelineResult(list(names), [], {}, {}, None, self.cfg)
@@ -124,7 +109,7 @@ class PairEngine:
         pool = ProcessPoolExecutor(max_workers=n_workers) if n_workers > 1 else None
         try:
             return self._match(names, feats, deadline, only, images, pool, t_start)
-        except BrokenProcessPool:     # không tạo được tiến trình con (ví dụ chạy từ stdin): làm tuần tự, kết quả như nhau
+        except BrokenProcessPool:
             return self._match(names, feats, deadline, only, images, None, t_start)
         finally:
             if pool is not None:
@@ -134,14 +119,14 @@ class PairEngine:
         t1 = time.perf_counter()
         raw, jobs = {}, {}
         order = sorted(only) if only is not None else list(itertools.combinations(range(len(names)), 2))
-        np.random.default_rng(0).shuffle(order)         # nếu hết giờ giữa chừng, mọi ảnh đều đã có một phần cặp
+        np.random.default_rng(0).shuffle(order)
         main_deadline = split_deadline(time.time(), deadline,
                                        self.cfg.lowtex_reserve if self.cfg.lowtex_pass and images is not None else 0.0)
         cache = {}
         sift_idx = next((s for s, (m, _) in enumerate(self.sources) if m.name.startswith("rootsift")), None)
         if self.cfg.priority_order and sift_idx is not None and len(self.sources) > 1:
             score = {}
-            for i, j in sorted(order):                  # khớp RootSIFT (rẻ) cho mọi cặp, giữ lại để khỏi khớp hai lần
+            for i, j in sorted(order):
                 if main_deadline is not None and time.time() > main_deadline:
                     break
                 try:
@@ -153,23 +138,23 @@ class PairEngine:
             order = priority_order(len(names), score, order)
         for i, j in order:
             if main_deadline is not None and time.time() > main_deadline:
-                break                                   # dừng sớm: các cặp chưa khớp bị bỏ
+                break
             try:
                 a, b = self._pooled(feats[i], feats[j], cache.get((i, j)))
-            except Exception:                           # một cặp lỗi (ví dụ hết bộ nhớ GPU) không làm hỏng cả bộ
+            except Exception:
                 print(f"[match] bỏ cặp ({names[i]}, {names[j]}):", file=sys.stderr)
                 traceback.print_exc()
                 continue
             raw[(i, j)] = (a, b)
-            args = (a, b, self.cfg.ransac_px, None)                        # lượt 1: tiêu cự tự do theo từng cặp
-            jobs[(i, j)] = pool.submit(run_ransac, args) if pool else run_ransac(args)   # CPU chạy chồng GPU
-        raw = dict(sorted(raw.items()))                 # thứ tự cố định, kết quả không phụ thuộc thứ tự xử lý
+            args = (a, b, self.cfg.ransac_px, None)
+            jobs[(i, j)] = pool.submit(run_ransac, args) if pool else run_ransac(args)
+        raw = dict(sorted(raw.items()))
         first = {k: (jobs[k].result() if pool else jobs[k]) for k in raw}
         t_match = time.perf_counter() - t1
 
         t2 = time.perf_counter()
         shared = None
-        if self.cfg.shared_focal:   # lượt 2: tiêu cự chung cho mọi ảnh nên fit một lần rồi cố định
+        if self.cfg.shared_focal:
             strong = [raw[k] for k, v in first.items() if v[0].sum() >= self.cfg.strong_inliers]
             shared = estimate_shared_focal(strong, self.cfg.ransac_px, pool=pool)
         second = first
@@ -208,9 +193,6 @@ class PairEngine:
         return PipelineResult(list(names), pairs, inlier_points, timing, shared, self.cfg)
 
     def _lowtex_pass(self, names, feats, images, pairs, shared, only, deadline, pool, inlier_points, cand_points):
-        """Ảnh có ít hơn `lowtex_degree` cặp được chấp nhận: trích đặc trưng lại sau chuẩn hóa tương phản cục bộ (cho
-        chúng và mọi ảnh còn lại), khớp các cặp có chúng, gộp với điểm khớp đã có và RANSAC với tiêu cự chung đã fit.
-        Chỉ nâng cặp chưa được chấp nhận; cặp đã chấp nhận giữ nguyên."""
         n = len(names)
         deg = np.zeros(n, int)
         for p in pairs:

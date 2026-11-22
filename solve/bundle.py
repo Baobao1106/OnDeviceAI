@@ -1,17 +1,3 @@
-"""Tối ưu toàn cục pose của 24 ảnh và FOV (bundle adjustment). NGƯỜI PHỤ TRÁCH: A.
-
-Cách làm:
-  1. Khởi tạo: dựng cây khung mạnh nhất (Prim, trọng số n_inliers) trên từng thành phần liên thông của đồ thị cặp,
-     nhân dần phép quay tương đối (`rotation` trong matches.json, hoặc tính lại bằng RANSAC nếu thiếu). Mỗi thành phần
-     được xoay khớp (Procrustes có loại điểm lệch) vào góc danh định của các ô, nên mọi thành phần cùng một hệ.
-  2. Tối ưu (scipy least_squares, mất mát Huber, đạo hàm thưa): mỗi điểm khớp cho sai số  R_i ray_i - R_j ray_j  trong hệ
-     thế giới; cộng một số hạng phạt rất nhẹ kéo mỗi pose về góc danh định của ô (lệch thật chỉ ±5°), chủ yếu để cố định
-     hệ chung và giữ ảnh ít khớp khỏi "trôi". Tối ưu cùng lúc 24 phép quay và FOV chung trong [70°, 79°].
-  3. Cặp sai bị loại: sau vòng đầu, cặp có sai số trung vị lớn bị bỏ rồi giải lại.
-  4. Ảnh không có cặp nào: pose = góc danh định của ô trong hệ chung (`source="slot_prior"`, `registered=False`).
-  5. Hết giờ giữa chừng: dùng nghiệm tốt nhất đã có (tối đa vài giây khi đủ giờ).
-  Chưa cân bằng ngang ở đây (`level.py` làm).
-"""
 import heapq
 import time
 
@@ -25,11 +11,11 @@ import common
 from .relative_rot import pixels_to_rays, relative_rotation
 
 FOV_LO, FOV_HI = 70.0, 79.0
-SIGMA_MATCH = 0.003        # rad (~0,17°, ~1,7 px) đơn vị chuẩn của sai số điểm khớp
-SIGMA_PRIOR = 0.15         # rad: pose thật lệch ô danh định ±5° (0,09 rad); chỉ phạt nhẹ
+SIGMA_MATCH = 0.003
+SIGMA_PRIOR = 0.15
 POINTS_PER_PAIR = 60
-FULL_WEIGHT_INLIERS = 40   # cặp ít điểm hơn mức này bị giảm trọng số
-PRUNE_MEDIAN_RAD = 0.02    # cặp có sai số trung vị lớn hơn mức này (~1,1°) coi là sai
+FULL_WEIGHT_INLIERS = 40
+PRUNE_MEDIAN_RAD = 0.02
 ALIGN_REJECT_DEG = 25.0
 
 
@@ -55,7 +41,6 @@ def _angle_deg(R):
 
 
 def procrustes(est, nom, reject_deg=ALIGN_REJECT_DEG):
-    """Phép quay A sao cho A @ est[k] ≈ nom[k] (loại các k lệch quá `reject_deg` rồi khớp lại, hai lần)."""
     keep = list(range(len(est)))
     A = np.eye(3)
     for _ in range(3):
@@ -79,7 +64,6 @@ def _pair_rotation(pair, hfov, size):
 
 
 def _tree_rotations(n, edges):
-    """edges: [(i, j, w, R_ij)] với R_ij = R_i^T R_j. Trả về ({chỉ số: R}, [thành phần]) bằng cây khung mạnh nhất."""
     adj = {k: [] for k in range(n)}
     for i, j, w, Rij in edges:
         adj[i].append((w, i, j, Rij))
@@ -95,7 +79,7 @@ def _tree_rotations(n, edges):
             _, a, b, rab = heapq.heappop(heap)
             if b in R:
                 continue
-            R[b] = R[a] @ rab                              # R_ab = R_a^T R_b
+            R[b] = R[a] @ rab
             comp.append(b)
             for w, c, d, rcd in adj[b]:
                 if d not in R:
@@ -116,7 +100,6 @@ def _initial_poses(names, pairs, nom, hfov, size):
 
 
 def _collect(names, pairs, hfov, size, seed=0):
-    """Mảng phẳng cho mọi điểm khớp đã lấy mẫu: chỉ số ảnh, pixel, trọng số, chỉ số cặp."""
     index = {nm: k for k, nm in enumerate(names)}
     rng = np.random.default_rng(seed)
     ii, jj, pi, pj, w, pid = [], [], [], [], [], []
@@ -141,7 +124,6 @@ def _match_residuals(R, fov, d, size):
 
 
 def _sparsity(m, d, n_res):
-    """Mẫu thưa của Jacobian: mỗi điểm khớp phụ thuộc pose hai ảnh và FOV; số hạng phạt chỉ phụ thuộc pose ảnh đó."""
     n_par = 3 * m + 1
     n = len(d["i"])
     rows = np.arange(n)
@@ -162,7 +144,6 @@ def _sparsity(m, d, n_res):
 
 
 def _optimise(R0, p0, fov0, d, size, deadline, max_nfev=40):
-    """Giải least_squares cho m ảnh; trả về (R, fov). p0: rotvec của (R0 @ R_danh_định^T) cho số hạng phạt."""
     m = len(R0)
     state = {"x": np.concatenate([np.zeros(3 * m), [fov0]])}
 
@@ -194,7 +175,6 @@ def _pair_medians(R, fov, d, size, n_pairs):
 
 
 def _solve_once(names, pairs, nom, hfov, size, deadline):
-    """Một lượt: khởi tạo + tối ưu. Trả về ({chỉ số ảnh: R}, fov, medians)."""
     R0 = _initial_poses(names, pairs, nom, hfov, size)
     used = sorted(R0)
     pos = {k: a for a, k in enumerate(used)}
@@ -208,7 +188,6 @@ def _solve_once(names, pairs, nom, hfov, size, deadline):
 
 
 def bundle_adjust(matches, slots, hfov_deg, deadline):
-    """Trả về (poses: dict, hfov_deg: float). poses[tên] = {"R", "registered", "source"}."""
     names = sorted(matches["images"])
     size = matches["image_size"]
     nom = _nominal(names, slots)
@@ -224,7 +203,6 @@ def bundle_adjust(matches, slots, hfov_deg, deadline):
 
 
 def _finish(names, Rs, nom):
-    """Ảnh không có pose tối ưu nhận góc danh định đã xoay vào cùng hệ với các ảnh đã đăng ký."""
     reg = sorted(Rs)
     A = procrustes([Rs[k] for k in reg], [nom[k] for k in reg]) if reg else np.eye(3)
     out = {}
