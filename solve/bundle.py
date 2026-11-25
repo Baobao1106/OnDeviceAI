@@ -17,6 +17,7 @@ POINTS_PER_PAIR = 60
 FULL_WEIGHT_INLIERS = 40
 PRUNE_MEDIAN_RAD = 0.02
 ALIGN_REJECT_DEG = 25.0
+MAX_NFEV = 300
 
 
 class _Expired(Exception):
@@ -143,7 +144,7 @@ def _sparsity(m, d, n_res):
     return coo_matrix((np.ones(len(r), int), (r, c)), shape=(n_res, n_par)).tocsr()
 
 
-def _optimise(R0, p0, fov0, d, size, deadline, max_nfev=40):
+def _optimise(R0, p0, fov0, d, size, deadline, max_nfev=MAX_NFEV):
     m = len(R0)
     state = {"x": np.concatenate([np.zeros(3 * m), [fov0]])}
 
