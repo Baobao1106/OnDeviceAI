@@ -15,6 +15,35 @@ from .rescue import rescue_isolated
 from .rotransac import estimate_shared_focal, rotation_ransac, run_ransac
 
 CAND_MIN_INLIERS = 4
+DARK_LEVEL = 12
+DARK_MIN_AREA = 2000
+DARK_MARGIN_PX = 16
+
+
+def dark_exclusion(bgr):
+    import cv2
+    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+    n, lab, stats, _ = cv2.connectedComponentsWithStats((gray < DARK_LEVEL).astype(np.uint8), connectivity=8)
+    h, w = gray.shape
+    zone = np.zeros((h, w), np.uint8)
+    for c in range(1, n):
+        x, y, cw, ch, area = stats[c]
+        touches = x == 0 or y == 0 or x + cw >= w or y + ch >= h
+        if area >= DARK_MIN_AREA and touches:
+            zone[lab == c] = 1
+    if not zone.any():
+        return None
+    k = 2 * DARK_MARGIN_PX + 1
+    return cv2.dilate(zone, np.ones((k, k), np.uint8)).astype(bool)
+
+
+def _outside(zone, pts):
+    if zone is None:
+        return np.ones(len(pts), bool)
+    h, w = zone.shape
+    x = np.clip(np.round(pts[:, 0]).astype(int), 0, w - 1)
+    y = np.clip(np.round(pts[:, 1]).astype(int), 0, h - 1)
+    return ~zone[y, x]
 
 
 @dataclass(frozen=True)
@@ -84,16 +113,19 @@ class PairEngine:
         self.load_time = time.perf_counter() - t0
 
     def extract(self, bgr):
-        return [m.extract(preprocess(bgr, True, clahe)) for m, clahe in self.sources]
+        return [m.extract(preprocess(bgr, True, clahe)) for m, clahe in self.sources] + [{"dark": dark_exclusion(bgr)}]
 
     def extract_lowtex(self, bgr):
-        return [m.extract(locnorm_gray(bgr)) for m, _ in self.sources]
+        return [m.extract(locnorm_gray(bgr)) for m, _ in self.sources] + [{"dark": dark_exclusion(bgr)}]
 
     def _pooled(self, fi, fj, cached=None):
         parts = [cached[s] if cached and s in cached else m.match(a, b)
                  for s, ((m, _), a, b) in enumerate(zip(self.sources, fi, fj))]
         a = np.concatenate([p[0] for p in parts]).astype(np.float64)
         b = np.concatenate([p[1] for p in parts]).astype(np.float64)
+        if len(fi) > len(self.sources) and len(fj) > len(self.sources):
+            keep = _outside(fi[-1].get("dark"), a) & _outside(fj[-1].get("dark"), b)
+            a, b = a[keep], b[keep]
         return a, b
 
     def pair_inliers(self, fi, fj):
