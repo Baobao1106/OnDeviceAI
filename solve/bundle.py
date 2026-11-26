@@ -18,6 +18,9 @@ FULL_WEIGHT_INLIERS = 40
 PRUNE_MEDIAN_RAD = 0.02
 ALIGN_REJECT_DEG = 25.0
 MAX_NFEV = 300
+NOMINAL_GATE_DEG = 35.0
+POLE_PITCH_DEG = 80.0
+POLE_VOTE_DEG = 8.0
 
 
 class _Expired(Exception):
@@ -62,6 +65,16 @@ def _pair_rotation(pair, hfov, size):
     if pair.get("rotation") is not None:
         return np.asarray(pair["rotation"], float)
     return relative_rotation(pair, hfov, size)[0]
+
+
+def _consistent_with_slots(pair, nom_i, nom_j, pole_i, pole_j, hfov, size):
+    Rij = _pair_rotation(pair, hfov, size)
+    N = nom_i.T @ nom_j
+    if pole_i or pole_j:
+        got = np.degrees(np.arccos(np.clip(Rij[2, 2], -1, 1)))
+        want = np.degrees(np.arccos(np.clip(N[2, 2], -1, 1)))
+        return abs(got - want) <= NOMINAL_GATE_DEG
+    return _angle_deg(Rij.T @ N) <= NOMINAL_GATE_DEG
 
 
 def _tree_rotations(n, edges):
@@ -188,12 +201,45 @@ def _solve_once(names, pairs, nom, hfov, size, deadline):
     return {k: R[pos[k]] for k in used}, fov, meds
 
 
+def _vote_pole_pairs(pairs, names, nom, pole, hfov, size):
+    index = {nm: k for k, nm in enumerate(names)}
+    ring = [p for p in pairs if not (pole[index[p["i"]]] or pole[index[p["j"]]])]
+    R0 = _initial_poses(names, ring, nom, hfov, size) if ring else {}
+    cand = {}
+    for p in pairs:
+        i, j = index[p["i"]], index[p["j"]]
+        if pole[i] == pole[j]:
+            continue
+        Rij = _pair_rotation(p, hfov, size)
+        k, q = (i, j) if pole[i] else (j, i)
+        if q not in R0:
+            continue
+        cand.setdefault(k, []).append((id(p), R0[q] @ (Rij.T if k == i else Rij), p["n_inliers"]))
+    drop = set()
+    for k, items in cand.items():
+        support = [sum(w2 for _, R2, w2 in items if _angle_deg(R1.T @ R2) <= POLE_VOTE_DEG) for _, R1, _ in items]
+        best = items[int(np.argmax(support))][1]
+        drop |= {pid for pid, R1, _ in items if _angle_deg(best.T @ R1) > POLE_VOTE_DEG}
+    return [p for p in pairs if id(p) not in drop]
+
+
+def _gate_pairs(pairs, names, nom, slots, hfov, size):
+    index = {nm: k for k, nm in enumerate(names)}
+    pole = [abs(slots["images"][n]["pitch_deg"]) >= POLE_PITCH_DEG for n in names]
+    keep = []
+    for p in pairs:
+        i, j = index[p["i"]], index[p["j"]]
+        if _consistent_with_slots(p, nom[i], nom[j], pole[i], pole[j], hfov, size):
+            keep.append(p)
+    return _vote_pole_pairs(keep, names, nom, pole, hfov, size)
+
+
 def bundle_adjust(matches, slots, hfov_deg, deadline):
     names = sorted(matches["images"])
     size = matches["image_size"]
     nom = _nominal(names, slots)
     hfov = float(np.clip(hfov_deg, FOV_LO, FOV_HI))
-    pairs = [p for p in matches["pairs"] if len(p["pts_i"]) >= 3]
+    pairs = _gate_pairs([p for p in matches["pairs"] if len(p["pts_i"]) >= 3], names, nom, slots, hfov, size)
     Rs = {}
     if pairs:
         Rs, hfov, meds = _solve_once(names, pairs, nom, hfov, size, deadline)
